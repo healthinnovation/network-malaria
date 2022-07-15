@@ -37,3 +37,7 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Data
+data/interim/*.csv
+data/processed/*.csv
