@@ -38,6 +38,8 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# Data
-data/interim/*.csv
-data/processed/*.csv
+# data
+analysis/data/raw/*.csv
+analysis/data/raw/*.gpkg
+analysis/data/interim/*.csv
+analysis/data/processed/*.csv

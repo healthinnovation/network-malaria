@@ -10,28 +10,116 @@ library(readr)
 library(dplyr)
 library(tidygraph)
 library(purrr)
+library(tidyr)
+library(scales)
 ```
 
 # Data reading
 
 ```{r}
-ccpp <- read_csv("data/interim/ccpp.csv", col_types = c("c", "n", rep("c", 7)))
-glimpse(ccpp)
+nodes <- read_csv("data/processed/nodes.csv", col_types = "ccccdccccd")
+glimpse(nodes)
 ```
 
 ```{r}
-od <- read_csv("data/interim/od-euclidean.csv", col_types = c("c", "c", "n"))
-glimpse(od)
-```
-```{r}
-hydrobasins <- unique(ccpp$HydroNameL6)
+edges <- read_csv("data/processed/edges.csv", col_types = "ccdddddddddddddddddd")
+glimpse(edges)
 ```
 
 ```{r}
-graphs <- split(ccpp, ~ HydroNameL6)
+intra_networks_raw <- nodes %>% 
+  nest(nodes = -hydro_name_ana) %>% 
+  mutate(ids = map(nodes, ~ pull(.x, 4))) %>% 
+  mutate(edges = map(ids, ~ filter(edges, origin %in% .x, destination %in% .x))) %>% 
+  mutate(size = map(edges, ~ dim(.x)[1])) %>% 
+  unnest(size)
+```
 
-for (i in seq_along(graphs)) {
-  append(graphs[i], "holi")
+```{r}
+intra_networks_raw
+```
+
+```{r}
+intra_networks <- intra_networks_raw %>% 
+  select(-ids) %>% 
+  filter(size > 2) %>% 
+  mutate(
+    networks = map2(
+      nodes, edges, 
+      ~ tbl_graph(directed = FALSE, node_key = "ccpp_id", nodes = .x, edges = .y)
+    )
+  ) %>% 
+  mutate(order = map(networks, ~ igraph::gorder(.x))) %>% 
+  unnest(order)
+```
+
+```{r}
+intra_networks
+```
+
+```{r}
+get_centralities <- function(graph) {
+  node_centralities <- graph %>% 
+    activate(nodes) %>% 
+    mutate(
+      degree = centrality_degree(),
+      strength_dist = centrality_degree(weights = distance),
+      strength_inv_dist = centrality_degree(weights = inv_distance),
+      strength_grav_pop = centrality_degree(weights = gravity_pop),
+      strength_modgrav_pop_ori = centrality_degree(weights = mod_gravity_pop_ori),
+      strength_modgrav_pop_dest = centrality_degree(weights = mod_gravity_pop_dest),
+      strength_modgrav_pop = centrality_degree(weights = mod_gravity_pop),
+      strength_grav_adef = centrality_degree(weights = gravity_adef),
+      strength_modgrav_adef_ori = centrality_degree(weights = mod_gravity_adef_ori),
+      strength_modgrav_adef_dest = centrality_degree(weights = mod_gravity_adef_dest),
+      strength_modgrav_adef = centrality_degree(weights = mod_gravity_adef),
+      closeness = centrality_closeness(),
+      closeness_dist = centrality_closeness(weights = distance),
+      closeness_inv_dist = centrality_closeness(weights = inv_distance),
+      closeness_grav_pop = centrality_closeness(weights = gravity_pop),
+      closeness_modgrav_pop_ori = centrality_closeness(weights = mod_gravity_pop_ori),
+      closeness_modgrav_pop_dest = centrality_closeness(weights = mod_gravity_pop_dest),
+      closeness_modgrav_pop = centrality_closeness(weights = mod_gravity_pop),
+      closeness_grav_adef = centrality_closeness(weights = gravity_adef),
+      closeness_modgrav_adef_ori = centrality_closeness(weights = mod_gravity_adef_ori),
+      closeness_modgrav_adef_dest = centrality_closeness(weights = mod_gravity_adef_dest),
+      closeness_modgrav_adef = centrality_closeness(weights = mod_gravity_adef),
+      # betweenness = centrality_betweenness(),
+      # betweenness_dist = centrality_betweenness(weights = distance),
+      # betweenness_inv_dist = centrality_betweenness(weights = inv_distance),
+      # betweenness_grav_pop = centrality_betweenness(weights = gravity_pop),
+      # betweenness_modgrav_pop_ori = centrality_betweenness(weights = mod_gravity_pop_ori),
+      # betweenness_modgrav_pop_dest = centrality_betweenness(weights = mod_gravity_pop_dest),
+      # betweenness_modgrav_pop = centrality_betweenness(weights = mod_gravity_pop),
+      # betweenness_grav_adef = centrality_betweenness(weights = gravity_adef),
+      # betweenness_modgrav_adef_ori = centrality_betweenness(weights = mod_gravity_adef_ori),
+      # betweenness_modgrav_adef_dest = centrality_betweenness(weights = mod_gravity_adef_dest),
+      # betweenness_modgrav_adef = centrality_betweenness(weights = mod_gravity_adef),
+    ) %>% 
+    as_tibble() %>% 
+    mutate(across(strength_dist:closeness_modgrav_adef, rescale))
 }
+```
+
+```{r}
+centrality_metrics <- intra_networks %>% 
+  mutate(centralities = map(networks, get_centralities))
+```
+
+```{r}
+centrality_metrics
+```
+
+```{r}
+ccpp_centralities <- centrality_metrics %>% 
+  select(hydro_name_ana, centralities) %>% 
+  unnest(centralities)
+```
+
+```{r}
+processed_path <- "data/processed/"
+file_name <- "ccpp-centralities.csv"
+file_path <- fs::path(processed_path, file_name)
+write_csv(ccpp_centralities, file_path, na = "")
 ```
 
