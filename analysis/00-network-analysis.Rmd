@@ -49,8 +49,11 @@ intra_networks <- intra_networks_raw %>%
       ~ tbl_graph(directed = FALSE, node_key = "ccpp_id", nodes = .x, edges = .y)
     )
   ) %>% 
-  mutate(order = map(networks, ~ igraph::gorder(.x))) %>% 
-  unnest(order)
+  mutate(
+    order = map(networks, ~ igraph::gorder(.x)),
+    edge_density = map(networks, ~ igraph::edge_density(.x))
+  ) %>% 
+  unnest(c(order, edge_density))
 ```
 
 ```{r}
@@ -84,20 +87,31 @@ get_centralities <- function(graph) {
       closeness_modgrav_adef_ori = centrality_closeness(weights = mod_gravity_adef_ori),
       closeness_modgrav_adef_dest = centrality_closeness(weights = mod_gravity_adef_dest),
       closeness_modgrav_adef = centrality_closeness(weights = mod_gravity_adef),
-      # betweenness = centrality_betweenness(),
-      # betweenness_dist = centrality_betweenness(weights = distance),
-      # betweenness_inv_dist = centrality_betweenness(weights = inv_distance),
-      # betweenness_grav_pop = centrality_betweenness(weights = gravity_pop),
-      # betweenness_modgrav_pop_ori = centrality_betweenness(weights = mod_gravity_pop_ori),
-      # betweenness_modgrav_pop_dest = centrality_betweenness(weights = mod_gravity_pop_dest),
-      # betweenness_modgrav_pop = centrality_betweenness(weights = mod_gravity_pop),
-      # betweenness_grav_adef = centrality_betweenness(weights = gravity_adef),
-      # betweenness_modgrav_adef_ori = centrality_betweenness(weights = mod_gravity_adef_ori),
-      # betweenness_modgrav_adef_dest = centrality_betweenness(weights = mod_gravity_adef_dest),
-      # betweenness_modgrav_adef = centrality_betweenness(weights = mod_gravity_adef),
+      betweenness = centrality_betweenness(),
+      betweenness_dist = centrality_betweenness(weights = distance),
+      betweenness_inv_dist = centrality_betweenness(weights = inv_distance),
+      betweenness_grav_pop = centrality_betweenness(weights = gravity_pop),
+      betweenness_modgrav_pop_ori = centrality_betweenness(weights = mod_gravity_pop_ori),
+      betweenness_modgrav_pop_dest = centrality_betweenness(weights = mod_gravity_pop_dest),
+      betweenness_modgrav_pop = centrality_betweenness(weights = mod_gravity_pop),
+      betweenness_grav_adef = centrality_betweenness(weights = gravity_adef),
+      betweenness_modgrav_adef_ori = centrality_betweenness(weights = mod_gravity_adef_ori),
+      betweenness_modgrav_adef_dest = centrality_betweenness(weights = mod_gravity_adef_dest),
+      betweenness_modgrav_adef = centrality_betweenness(weights = mod_gravity_adef),
+      eigen = centrality_eigen(),
+      eigen_dist = centrality_eigen(weights = distance),
+      eigen_inv_dist = centrality_eigen(weights = inv_distance),
+      eigen_grav_pop = centrality_eigen(weights = gravity_pop),
+      eigen_modgrav_pop_ori = centrality_eigen(weights = mod_gravity_pop_ori),
+      eigen_modgrav_pop_dest = centrality_eigen(weights = mod_gravity_pop_dest),
+      eigen_modgrav_pop = centrality_eigen(weights = mod_gravity_pop),
+      eigen_grav_adef = centrality_eigen(weights = gravity_adef),
+      eigen_modgrav_adef_ori = centrality_eigen(weights = mod_gravity_adef_ori),
+      eigen_modgrav_adef_dest = centrality_eigen(weights = mod_gravity_adef_dest),
+      eigen_modgrav_adef = centrality_eigen(weights = mod_gravity_adef),
     ) %>% 
     as_tibble() %>% 
-    mutate(across(strength_dist:closeness_modgrav_adef, rescale))
+    mutate(across(strength_dist:eigen_modgrav_adef, rescale))
 }
 ```
 
@@ -112,7 +126,7 @@ centrality_metrics
 
 ```{r}
 ccpp_centralities <- centrality_metrics %>% 
-  select(hydro_name_ana, centralities) %>% 
+  select(hydro_name_ana, size, order, edge_density, centralities) %>% 
   unnest(centralities)
 ```
 
