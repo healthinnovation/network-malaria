@@ -125,9 +125,7 @@ travel_time <- function(x){
   return(df)
 }
 
-# lejos <- cp |> 
-#   filter(id_loc %in% c("1601140006","1604020026")) |> 
-#   sf_as_ee()
-
 lista_tt <- lapply(1:nrow(cp),travel_time)
 data_final <- lista_tt %>% map_df(.f = as.data.frame)
+write_csv(x = data_final,file = "Documentos/travel_time.csv")
+write_rds(x = lista_tt,"Documentos/travel_time_lista.rds")
