@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r}
+```{r message=FALSE}
 library(readr)
 library(dplyr)
 library(tidygraph)
@@ -22,7 +22,7 @@ glimpse(nodes)
 ```
 
 ```{r}
-edges <- read_csv("data/processed/edges.csv", col_types = "ccdddddddddddddddddd")
+edges <- read_csv("data/processed/edges.csv", col_types = "ccd")
 glimpse(edges)
 ```
 
@@ -30,7 +30,7 @@ glimpse(edges)
 intra_networks_raw <- nodes %>% 
   nest(nodes = -hydro_name_ana) %>% 
   mutate(ids = map(nodes, ~ pull(.x, 4))) %>% 
-  mutate(edges = map(ids, ~ filter(edges, origin %in% .x, destination %in% .x))) %>% 
+  mutate(edges = map(ids, ~ filter(edges, from %in% .x, to %in% .x))) %>% 
   mutate(size = map(edges, ~ dim(.x)[1])) %>% 
   unnest(size)
 ```
@@ -66,52 +66,92 @@ get_centralities <- function(graph) {
     activate(nodes) %>% 
     mutate(
       degree = centrality_degree(),
-      strength_dist = centrality_degree(weights = distance),
-      strength_inv_dist = centrality_degree(weights = inv_distance),
-      strength_grav_pop = centrality_degree(weights = gravity_pop),
-      strength_modgrav_pop_ori = centrality_degree(weights = mod_gravity_pop_ori),
-      strength_modgrav_pop_dest = centrality_degree(weights = mod_gravity_pop_dest),
-      strength_modgrav_pop = centrality_degree(weights = mod_gravity_pop),
-      strength_grav_adef = centrality_degree(weights = gravity_adef),
-      strength_modgrav_adef_ori = centrality_degree(weights = mod_gravity_adef_ori),
-      strength_modgrav_adef_dest = centrality_degree(weights = mod_gravity_adef_dest),
-      strength_modgrav_adef = centrality_degree(weights = mod_gravity_adef),
+      str_d = centrality_degree(weights = distance),
+      str_d_inv = centrality_degree(weights = d_inv),
+      str_d_grav_pop = centrality_degree(weights = d_grav_pop),
+      str_d_mgrav_from_pop = centrality_degree(weights = d_mgrav_from_pop),
+      str_d_mgrav_to_pop = centrality_degree(weights = d_mgrav_to_pop),
+      str_d_mgrav_pop = centrality_degree(weights = d_mgrav_pop),
+      str_d_grav_adef = centrality_degree(weights = d_grav_adef),
+      str_d_mgravity_from_adef = centrality_degree(weights = d_mgravity_from_adef),
+      str_d_mgravity_to_adef = centrality_degree(weights = d_mgravity_to_adef),
+      str_d_mgrav_adef = centrality_degree(weights = d_mgrav_adef),
+      str_t = centrality_degree(weights = time),
+      str_t_inv = centrality_degree(weights = t_inv),
+      str_t_grav_pop = centrality_degree(weights = t_grav_pop),
+      str_t_mgrav_from_pop = centrality_degree(weights = t_mgrav_from_pop),
+      str_t_mgrav_to_pop = centrality_degree(weights = t_mgrav_to_pop),
+      str_t_mgrav_pop = centrality_degree(weights = t_mgrav_pop),
+      str_t_grav_adef = centrality_degree(weights = t_grav_adef),
+      str_t_mgravity_from_adef = centrality_degree(weights = t_mgravity_from_adef),
+      str_t_mgravity_to_adef = centrality_degree(weights = t_mgravity_to_adef),
+      str_t_mgrav_adef = centrality_degree(weights = t_mgrav_adef),
       closeness = centrality_closeness(),
-      closeness_dist = centrality_closeness(weights = distance),
-      closeness_inv_dist = centrality_closeness(weights = inv_distance),
-      closeness_grav_pop = centrality_closeness(weights = gravity_pop),
-      closeness_modgrav_pop_ori = centrality_closeness(weights = mod_gravity_pop_ori),
-      closeness_modgrav_pop_dest = centrality_closeness(weights = mod_gravity_pop_dest),
-      closeness_modgrav_pop = centrality_closeness(weights = mod_gravity_pop),
-      closeness_grav_adef = centrality_closeness(weights = gravity_adef),
-      closeness_modgrav_adef_ori = centrality_closeness(weights = mod_gravity_adef_ori),
-      closeness_modgrav_adef_dest = centrality_closeness(weights = mod_gravity_adef_dest),
-      closeness_modgrav_adef = centrality_closeness(weights = mod_gravity_adef),
+      close_d = centrality_closeness(weights = distance),
+      close_d_inv = centrality_closeness(weights = d_inv),
+      close_d_grav_pop = centrality_closeness(weights = d_grav_pop),
+      close_d_mgrav_from_pop = centrality_closeness(weights = d_mgrav_from_pop),
+      close_d_mgrav_to_pop = centrality_closeness(weights = d_mgrav_to_pop),
+      close_d_mgrav_pop = centrality_closeness(weights = d_mgrav_pop),
+      close_d_grav_adef = centrality_closeness(weights = d_grav_adef),
+      close_d_mgravity_from_adef = centrality_closeness(weights = d_mgravity_from_adef),
+      close_d_mgravity_to_adef = centrality_closeness(weights = d_mgravity_to_adef),
+      close_d_mgrav_adef = centrality_closeness(weights = d_mgrav_adef),
+      close_t = centrality_closeness(weights = time),
+      close_t_inv = centrality_closeness(weights = t_inv),
+      close_t_grav_pop = centrality_closeness(weights = t_grav_pop),
+      close_t_mgrav_from_pop = centrality_closeness(weights = t_mgrav_from_pop),
+      close_t_mgrav_to_pop = centrality_closeness(weights = t_mgrav_to_pop),
+      close_t_mgrav_pop = centrality_closeness(weights = t_mgrav_pop),
+      close_t_grav_adef = centrality_closeness(weights = t_grav_adef),
+      close_t_mgravity_from_adef = centrality_closeness(weights = t_mgravity_from_adef),
+      close_t_mgravity_to_adef = centrality_closeness(weights = t_mgravity_to_adef),
+      close_t_mgrav_adef = centrality_closeness(weights = t_mgrav_adef),
       betweenness = centrality_betweenness(),
-      betweenness_dist = centrality_betweenness(weights = distance),
-      betweenness_inv_dist = centrality_betweenness(weights = inv_distance),
-      betweenness_grav_pop = centrality_betweenness(weights = gravity_pop),
-      betweenness_modgrav_pop_ori = centrality_betweenness(weights = mod_gravity_pop_ori),
-      betweenness_modgrav_pop_dest = centrality_betweenness(weights = mod_gravity_pop_dest),
-      betweenness_modgrav_pop = centrality_betweenness(weights = mod_gravity_pop),
-      betweenness_grav_adef = centrality_betweenness(weights = gravity_adef),
-      betweenness_modgrav_adef_ori = centrality_betweenness(weights = mod_gravity_adef_ori),
-      betweenness_modgrav_adef_dest = centrality_betweenness(weights = mod_gravity_adef_dest),
-      betweenness_modgrav_adef = centrality_betweenness(weights = mod_gravity_adef),
+      bet_d = centrality_betweenness(weights = distance),
+      bet_d_inv = centrality_betweenness(weights = d_inv),
+      bet_d_grav_pop = centrality_betweenness(weights = d_grav_pop),
+      bet_d_mgrav_from_pop = centrality_betweenness(weights = d_mgrav_from_pop),
+      bet_d_mgrav_to_pop = centrality_betweenness(weights = d_mgrav_to_pop),
+      bet_d_mgrav_pop = centrality_betweenness(weights = d_mgrav_pop),
+      bet_d_grav_adef = centrality_betweenness(weights = d_grav_adef),
+      bet_d_mgravity_from_adef = centrality_betweenness(weights = d_mgravity_from_adef),
+      bet_d_mgravity_to_adef = centrality_betweenness(weights = d_mgravity_to_adef),
+      bet_d_mgrav_adef = centrality_betweenness(weights = d_mgrav_adef),
+      bet_t = centrality_betweenness(weights = time),
+      bet_t_inv = centrality_betweenness(weights = t_inv),
+      bet_t_grav_pop = centrality_betweenness(weights = t_grav_pop),
+      bet_t_mgrav_from_pop = centrality_betweenness(weights = t_mgrav_from_pop),
+      bet_t_mgrav_to_pop = centrality_betweenness(weights = t_mgrav_to_pop),
+      bet_t_mgrav_pop = centrality_betweenness(weights = t_mgrav_pop),
+      bet_t_grav_adef = centrality_betweenness(weights = t_grav_adef),
+      bet_t_mgravity_from_adef = centrality_betweenness(weights = t_mgravity_from_adef),
+      bet_t_mgravity_to_adef = centrality_betweenness(weights = t_mgravity_to_adef),
+      bet_t_mgrav_adef = centrality_betweenness(weights = t_mgrav_adef),
       eigen = centrality_eigen(),
-      eigen_dist = centrality_eigen(weights = distance),
-      eigen_inv_dist = centrality_eigen(weights = inv_distance),
-      eigen_grav_pop = centrality_eigen(weights = gravity_pop),
-      eigen_modgrav_pop_ori = centrality_eigen(weights = mod_gravity_pop_ori),
-      eigen_modgrav_pop_dest = centrality_eigen(weights = mod_gravity_pop_dest),
-      eigen_modgrav_pop = centrality_eigen(weights = mod_gravity_pop),
-      eigen_grav_adef = centrality_eigen(weights = gravity_adef),
-      eigen_modgrav_adef_ori = centrality_eigen(weights = mod_gravity_adef_ori),
-      eigen_modgrav_adef_dest = centrality_eigen(weights = mod_gravity_adef_dest),
-      eigen_modgrav_adef = centrality_eigen(weights = mod_gravity_adef),
+      eigen_d = centrality_eigen(weights = distance),
+      eigen_d_inv = centrality_eigen(weights = d_inv),
+      eigen_d_grav_pop = centrality_eigen(weights = d_grav_pop),
+      eigen_d_mgrav_from_pop = centrality_eigen(weights = d_mgrav_from_pop),
+      eigen_d_mgrav_to_pop = centrality_eigen(weights = d_mgrav_to_pop),
+      eigen_d_mgrav_pop = centrality_eigen(weights = d_mgrav_pop),
+      eigen_d_grav_adef = centrality_eigen(weights = d_grav_adef),
+      eigen_d_mgravity_from_adef = centrality_eigen(weights = d_mgravity_from_adef),
+      eigen_d_mgravity_to_adef = centrality_eigen(weights = d_mgravity_to_adef),
+      eigen_d_mgrav_adef = centrality_eigen(weights = d_mgrav_adef),
+      eigen_t = centrality_eigen(weights = time),
+      eigen_t_inv = centrality_eigen(weights = t_inv),
+      eigen_t_grav_pop = centrality_eigen(weights = t_grav_pop),
+      eigen_t_mgrav_from_pop = centrality_eigen(weights = t_mgrav_from_pop),
+      eigen_t_mgrav_to_pop = centrality_eigen(weights = t_mgrav_to_pop),
+      eigen_t_mgrav_pop = centrality_eigen(weights = t_mgrav_pop),
+      eigen_t_grav_adef = centrality_eigen(weights = t_grav_adef),
+      eigen_t_mgravity_from_adef = centrality_eigen(weights = t_mgravity_from_adef),
+      eigen_t_mgravity_to_adef = centrality_eigen(weights = t_mgravity_to_adef),
+      eigen_t_mgrav_adef = centrality_eigen(weights = t_mgrav_adef)
     ) %>% 
     as_tibble() %>% 
-    mutate(across(strength_dist:eigen_modgrav_adef, rescale))
+    mutate(across(str_d:eigen_t_mgrav_adef, rescale))
 }
 ```
 

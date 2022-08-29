@@ -11,65 +11,77 @@ nodes_full_raw <- read_csv(nodes_full_path)
 nodes_full <- nodes_full_raw %>%
   mutate(adef = rowMeans(across(starts_with("adef"))))
 
-nodes_weights <- nodes_full %>%
-  select(ccpp_id, population, adef)
+nodes_raw <- nodes_full %>%
+  select(ccpp_id, population, adef) %>%
+  filter(population > 0, adef > 0)
 
 raw_path <- path("analysis/data/raw/")
-od_filename <- "od-eucli-distance.csv"
-od_path <- path(raw_path, od_filename)
-od <- read_csv(
-  od_path, col_names = c("origin_id", "destination_id", "distance"),
+od_travel_time_filename <- "od-travel-time-original.csv"
+od_travel_time_path <- path(raw_path, od_travel_time_filename)
+
+od_distance_filename <- "od-distance-original.csv"
+od_distance_path <- path(raw_path, od_distance_filename)
+
+od_travel_time_raw <- read_csv(
+  od_travel_time_path, col_names = c("fromid", "toid", "time"),
+  col_types = "ccd", skip = 1
+)
+
+od_distance_raw <- read_csv(
+  od_distance_path, col_names = c("fromid", "toid", "distance"),
   col_types = "ccd", skip = 1
 )
 
 # Edges -------------------------------------------------------------------
 
-# Hay ccpp de origen y de destino que no estan en la tabla general
-# 541868000, 548270000, 532340000
-
-nodes_population <- select(nodes_weights, ccpp_id, population)
-
-edges_raw <- od %>%
-  filter(origin_id != destination_id) %>%
-  inner_join(nodes_population, by = c("origin_id" = "ccpp_id")) %>%
-  inner_join(
-    nodes_population, by = c("destination_id" = "ccpp_id"),
-    suffix = c("_origin", "_destination")
-  ) %>%
-  filter(population_origin > 1, population_destination > 1) %>%
-  select(origin_id, destination_id, distance) %>%
+od_travel_time <- od_travel_time_raw %>%
+  filter(fromid != toid, time > 0) %>%
   group_by(
-    origin = pmin(origin_id, destination_id),
-    destination = pmax(origin_id, destination_id)
+    from = pmin(fromid, toid),
+    to = pmax(fromid, toid)
   ) %>%
-  summarise(distance = mean(distance), .groups = "drop") %>%
-  filter(distance > 0)
+  summarise(time = mean(time), .groups = "drop")
 
-# TODO: Verificar distancia
-# TODO: Probar distinct
+od_distance <- od_distance_raw %>%
+  filter(fromid != toid, distance > 0) %>%
+  group_by(
+    from = pmin(fromid, toid),
+    to = pmax(fromid, toid)
+  ) %>%
+  summarise(distance = mean(distance), .groups = "drop")
 
-edges_nodes <- edges %>%
-  inner_join(nodes_weights, by = c("origin" = "ccpp_id")) %>%
+edges_raw <- od_distance %>%
+  inner_join(od_travel_time, by = c("from", "to"))
+
+edges <- edges_raw %>%
+  inner_join(nodes_raw, by = c("from" = "ccpp_id")) %>%
   inner_join(
-    nodes_weights, by = c("destination" = "ccpp_id"),
-    suffix = c("_origin", "_destination")
-  )
-
-edges <- edges_nodes %>%
+    nodes_raw, by = c("to" = "ccpp_id"),
+    suffix = c("_from", "_to")
+  ) %>%
   mutate(
-    inv_distance = 1 / distance,
-    gravity_pop = (population_origin * population_destination) / distance,
-    mod_gravity_pop_ori = distance * (population_origin / population_destination),
-    mod_gravity_pop_dest = distance * (population_destination / population_origin),
-    max_population = pmax(population_origin, population_destination),
-    min_population = pmin(population_origin, population_destination),
-    mod_gravity_pop = distance * (max_population / min_population),
-    gravity_adef = (adef_origin * adef_destination) / distance,
-    mod_gravity_adef_ori = distance * (adef_origin / adef_destination),
-    mod_gravity_adef_dest = distance * (adef_destination / adef_origin),
-    max_adef = pmax(adef_origin, adef_destination),
-    min_adef = pmin(adef_origin, adef_destination),
-    mod_gravity_adef = distance * (max_adef / min_adef)
+    d_inv = 1 / distance,
+    d_grav_pop = (population_from * population_to) / distance,
+    d_mgrav_from_pop = distance * (population_from / population_to),
+    d_mgrav_to_pop = distance * (population_to / population_from),
+    max_population = pmax(population_from, population_to),
+    min_population = pmin(population_from, population_to),
+    d_mgrav_pop = distance * (max_population / min_population),
+    d_grav_adef = (adef_from * adef_to) / distance,
+    d_mgravity_from_adef = distance * (adef_from / adef_to),
+    d_mgravity_to_adef = distance * (adef_to / adef_from),
+    max_adef = pmax(adef_from, adef_to),
+    min_adef = pmin(adef_from, adef_to),
+    d_mgrav_adef = distance * (max_adef / min_adef),
+    t_inv = 1 / time,
+    t_grav_pop = (population_from * population_to) / time,
+    t_mgrav_from_pop = time * (population_from / population_to),
+    t_mgrav_to_pop = time * (population_to / population_from),
+    t_mgrav_pop = time * (max_population / min_population),
+    t_grav_adef = (adef_from * adef_to) / time,
+    t_mgravity_from_adef = time * (adef_from / adef_to),
+    t_mgravity_to_adef = time * (adef_to / adef_from),
+    t_mgrav_adef = time * (max_adef / min_adef)
   ) %>%
   select(
     -c(
@@ -80,7 +92,7 @@ edges <- edges_nodes %>%
 
 # Nodes -------------------------------------------------------------------
 
-ccpp_id_edges <- unique(c(edges$origin, edges$destination))
+ccpp_id_edges <- unique(c(edges$from, edges$to))
 
 nodes <- nodes_full %>%
   select(province:hydro_name_l7, adef) %>%
