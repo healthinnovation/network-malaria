@@ -8,7 +8,7 @@ ee_Initialize(
   drive = TRUE
   )
 cp <- st_read(
-  "../Recursos/centro_poblado_movido.gpkg"
+  "./resources/centro_poblado_original.gpkg"
   ) %>%
   st_transform(32718)%>%
   st_buffer(dist = 5000) %>%
