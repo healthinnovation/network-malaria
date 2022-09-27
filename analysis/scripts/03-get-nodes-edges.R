@@ -12,7 +12,7 @@ nodes_full <- nodes_full_raw %>%
   mutate(adef = rowMeans(across(starts_with("adef"))))
 
 nodes_raw <- nodes_full %>%
-  select(ccpp_id, population, adef) %>%
+  select(village_id, population, adef) %>%
   filter(population > 0, adef > 0)
 
 raw_path <- path("analysis/data/raw/")
@@ -54,9 +54,9 @@ edges_raw <- od_distance %>%
   inner_join(od_travel_time, by = c("from", "to"))
 
 edges <- edges_raw %>%
-  inner_join(nodes_raw, by = c("from" = "ccpp_id")) %>%
+  inner_join(nodes_raw, by = c("from" = "village_id")) %>%
   inner_join(
-    nodes_raw, by = c("to" = "ccpp_id"),
+    nodes_raw, by = c("to" = "village_id"),
     suffix = c("_from", "_to")
   ) %>%
   mutate(
@@ -92,11 +92,11 @@ edges <- edges_raw %>%
 
 # Nodes -------------------------------------------------------------------
 
-ccpp_id_edges <- unique(c(edges$from, edges$to))
+village_id_edges <- unique(c(edges$from, edges$to))
 
 nodes <- nodes_full %>%
   select(province:hydro_name_l7, adef) %>%
-  filter(ccpp_id %in% ccpp_id_edges)
+  filter(village_id %in% village_id_edges)
 
 edges_filename <- "edges.csv"
 edges_path <- path(processed_path, edges_filename)

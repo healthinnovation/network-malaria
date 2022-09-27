@@ -42,4 +42,9 @@ vignettes/*.pdf
 analysis/data/raw/*.csv
 analysis/data/raw/*.gpkg
 analysis/data/interim/*.csv
-analysis/data/processed/*.csv
+analysis/data/processed/actual-edges.csv
+analysis/data/processed/actual-nodes.csv
+analysis/data/processed/edges.csv
+analysis/data/processed/nodes-full.csv
+analysis/data/processed/nodes.csv
+analysis/figs/

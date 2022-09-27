@@ -14,11 +14,11 @@ datasets_names <- names(datasets_raw) %>%
 
 names(datasets_raw) <- datasets_names
 
-datasets <- datasets_raw[c("ccpp", setdiff(datasets_names, "ccpp"))]
+datasets <- datasets_raw[c("villages", setdiff(datasets_names, "villages"))]
 
 # Join datasets -----------------------------------------------------------
 
-nodes_full <- reduce(datasets, left_join, by = "ccpp_id")
+nodes_full <- reduce(datasets, left_join, by = "village_id")
 
 output_path <- path("analysis/data/processed/")
 output_filename <- "nodes-full.csv"

@@ -12,6 +12,8 @@ library(tidygraph)
 library(purrr)
 library(tidyr)
 library(scales)
+library(ggraph)
+library(sf)
 ```
 
 # Data reading
@@ -27,7 +29,19 @@ glimpse(edges)
 ```
 
 ```{r}
-intra_networks_raw <- nodes %>% 
+villages_coord_raw <- st_read("data/raw/villages-original.gpkg")
+
+villages_coord <- villages_coord_raw %>% 
+  mutate(lon = st_coordinates(.)[,1], lat = st_coordinates(.)[,2]) %>% 
+  st_drop_geometry() %>% 
+  select(village_id = id_loc, lon, lat)
+
+nodes_coord <- nodes %>% 
+  left_join(villages_coord, by = "village_id")
+```
+
+```{r}
+networks_raw <- nodes_coord %>% 
   nest(nodes = -hydro_name_ana) %>% 
   mutate(ids = map(nodes, ~ pull(.x, 4))) %>% 
   mutate(edges = map(ids, ~ filter(edges, from %in% .x, to %in% .x))) %>% 
@@ -36,17 +50,19 @@ intra_networks_raw <- nodes %>%
 ```
 
 ```{r}
-intra_networks_raw
+networks_raw
 ```
 
 ```{r}
-intra_networks <- intra_networks_raw %>% 
+networks <- networks_raw %>% 
   select(-ids) %>% 
   filter(size > 2) %>% 
   mutate(
     networks = map2(
       nodes, edges, 
-      ~ tbl_graph(directed = FALSE, node_key = "ccpp_id", nodes = .x, edges = .y)
+      ~ tbl_graph(
+        directed = FALSE, node_key = "village_id", nodes = .x, edges = .y
+      )
     )
   ) %>% 
   mutate(
@@ -57,13 +73,28 @@ intra_networks <- intra_networks_raw %>%
 ```
 
 ```{r}
-intra_networks
+networks
+```
+
+```{r}
+actual_edges <- networks %>% 
+  select(hydro_name_ana, edges) %>% 
+  unnest(edges)
+```
+
+```{r}
+actual_nodes_id <- unique(c(actual_edges$from, actual_edges$to))
+actual_nodes <- filter(nodes, village_id %in% actual_nodes_id)
+```
+
+```{r eval=FALSE, include=FALSE}
+# write_csv(actual_edges, "data/processed/actual-edges.csv")
+# write_csv(actual_nodes, "data/processed/actual-nodes.csv")
 ```
 
 ```{r}
 get_centralities <- function(graph) {
-  node_centralities <- graph %>% 
-    activate(nodes) %>% 
+  graph_centralities <- graph %>% 
     mutate(
       degree = centrality_degree(),
       str_d = centrality_degree(weights = distance),
@@ -150,30 +181,102 @@ get_centralities <- function(graph) {
       eigen_t_mgravity_to_adef = centrality_eigen(weights = t_mgravity_to_adef),
       eigen_t_mgrav_adef = centrality_eigen(weights = t_mgrav_adef)
     ) %>% 
-    as_tibble() %>% 
+    activate(nodes) %>% 
     mutate(across(str_d:eigen_t_mgrav_adef, rescale))
 }
 ```
 
-```{r}
-centrality_metrics <- intra_networks %>% 
+```{r warning=FALSE}
+centralities <- networks %>% 
   mutate(centralities = map(networks, get_centralities))
 ```
 
 ```{r}
-centrality_metrics
+centralities
 ```
 
 ```{r}
-ccpp_centralities <- centrality_metrics %>% 
+village_centralities <- centralities %>% 
   select(hydro_name_ana, size, order, edge_density, centralities) %>% 
-  unnest(centralities)
+  mutate(centralities_dfs = map(centralities, ~ as_tibble(activate(.x, nodes)))) %>% 
+  select(-centralities) %>% 
+  unnest(centralities_dfs)
 ```
 
 ```{r}
 processed_path <- "data/processed/"
-file_name <- "ccpp-centralities.csv"
+file_name <- "village-centralities.csv"
 file_path <- fs::path(processed_path, file_name)
-write_csv(ccpp_centralities, file_path, na = "")
+# write_csv(village_centralities, file_path, na = "")
 ```
+
+# Flow maps
+
+```{r}
+g <- centralities$centralities[[5]]
+```
+
+```{r}
+g %>% 
+  ggraph(layout = "linear", circular = TRUE) +
+  geom_edge_arc(aes(alpha = d_inv)) + 
+  geom_node_point(aes(size = population))
+```
+
+```{r}
+g %>% 
+  ggraph(layout = "circle") +
+  geom_edge_fan(aes(alpha = d_inv)) + 
+  geom_node_point(aes(size = population))
+```
+
+```{r}
+coord <- g %>% 
+  activate(nodes) %>% 
+  select(x = lon, y = lat) %>% 
+  as_tibble()
+```
+
+
+```{r}
+layout <- create_layout(g, layout = coord)
+```
+
+```{r}
+g %>% 
+  ggraph(graph = layout) +
+  geom_edge_arc(aes(alpha = rescale(d_inv, to = c(0.1, 0.5))), strength = 0.1) + 
+  geom_node_point(aes(size = population)) +
+  scale_alpha_manual(range = c(0.1, 0.5))
+```
+
+```{r}
+g %>% 
+  ggraph(graph = layout) +
+  geom_edge_arc(aes(alpha = d_inv), strength = 0.1) + 
+  geom_node_point(aes(size = population))
+```
+
+```{r}
+alpha_values <- g %>% 
+  activate(edges) %>% 
+  pull(d_inv) %>% 
+  rescale(to = c(0.1, 0.7))
+```
+
+
+```{r}
+g %>% 
+  ggraph(graph = layout) +
+  geom_edge_arc(aes(alpha = d_inv), strength = 0.1) + 
+  geom_node_point(aes(size = population)) +
+  scale_edge_alpha(range = c(0.02, 0.05))
+```
+
+```{r}
+ggsave("figs/plot-graph.pdf", device = "pdf", dpi = 300)
+```
+
+
+
 
