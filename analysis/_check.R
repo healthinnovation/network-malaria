@@ -15,10 +15,6 @@ nodes_full_raw <- read_csv(nodes_full_path)
 nodes_full <- nodes_full_raw %>%
   mutate(adef = rowMeans(across(starts_with("adef"))))
 
-nodes_raw <- nodes_full %>%
-  select(village_id, population, adef) %>%
-  filter(population > 0, adef > 0)
-
 raw_path <- path("analysis/data/raw/")
 od_travel_time_filename <- "od-travel-time-original.csv"
 od_travel_time_path <- path(raw_path, od_travel_time_filename)
@@ -26,36 +22,46 @@ od_travel_time_path <- path(raw_path, od_travel_time_filename)
 od_distance_filename <- "od-distance-original.csv"
 od_distance_path <- path(raw_path, od_distance_filename)
 
-od_travel_time_raw <- read_csv(
+od_travel_time_full_raw <- read_csv(
   od_travel_time_path, col_names = c("fromid", "toid", "time"),
   col_types = "ccd", skip = 1
 )
 
-od_distance_raw <- read_csv(
+od_distance_full_raw <- read_csv(
   od_distance_path, col_names = c("fromid", "toid", "distance"),
   col_types = "ccd", skip = 1
 )
 
-# Edges -------------------------------------------------------------------
 
-od_travel_time <- od_travel_time_raw %>%
-  filter(fromid != toid, time > 0) %>%
+# Filter population and forest loss ---------------------------------------
+
+nodes_calculations <- nodes_full %>%
+  select(hydro_name_ana, village_id, population, adef) %>%
+  filter(
+    population > 0, adef > 0,
+    !(hydro_name_ana %in% c("Cuenca Cushabatay", "Intercuenca 49875"))
+  )
+
+od_full_raw <- od_distance_full_raw %>%
+  inner_join(od_travel_time_full_raw, by = c("fromid", "toid")) %>%
+  filter(fromid != toid) %>%
   group_by(
     from = pmin(fromid, toid),
     to = pmax(fromid, toid)
   ) %>%
-  summarise(time = mean(time), .groups = "drop")
-
-od_distance <- od_distance_raw %>%
-  filter(fromid != toid, distance > 0) %>%
-  group_by(
-    from = pmin(fromid, toid),
-    to = pmax(fromid, toid)
+  summarise(distance = mean(distance), time = mean(time), .groups = "drop") %>%
+  inner_join(nodes_calculations, by = c("from" = "village_id")) %>%
+  inner_join(
+    nodes_calculations, by = c("to" = "village_id"),
+    suffix = c("_from", "_to")
   ) %>%
-  summarise(distance = mean(distance), .groups = "drop")
+  filter(hydro_name_ana_from == hydro_name_ana_to) %>%
+  mutate(hydro_name_ana = hydro_name_ana_from) %>%
+  select(-c(hydro_name_ana_from, hydro_name_ana_to))
 
-edges_clean <- od_distance %>%
-  inner_join(od_travel_time, by = c("from", "to"))
+
+edges_raw <- od_full_raw %>%
+  filter(time > 0)
 
 # Nodes -------------------------------------------------------------------
 

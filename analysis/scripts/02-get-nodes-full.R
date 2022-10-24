@@ -3,8 +3,8 @@ library(readr)
 library(fs)
 library(purrr)
 
-input_path <- path("analysis/data/interim/")
-file_paths <- dir_ls(input_path, glob = "*.csv")
+interim_path <- path("analysis/data/interim/")
+file_paths <- dir_ls(interim_path, glob = "*.csv")
 
 datasets_raw <- map(file_paths, read_csv, show_col_type = FALSE)
 

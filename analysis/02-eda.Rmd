@@ -1,0 +1,115 @@
+---
+title: "Exploratory data analysis"
+author: "Diego Villa"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r message=FALSE}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(geofacet)
+library(ggsci)
+library(ggplot2)
+```
+
+```{r}
+malaria_raw <- read_csv(
+  "data/raw/malaria-cases.csv",
+  col_select = c(
+    province, district, village, village_id = id_loc, population = nrohab,
+    year, month, falciparum = fal, vivax = viv, river_name = RiverName, 
+    hydro_name_ana = HydroNameANA, hydro_name_l6 = HydroNameL6, 
+    hydro_name_l7 = HydroNameL7
+  )
+)
+```
+
+```{r}
+nodes <- read_csv("data/processed/nodes.csv", col_types = "ccccdccccd")
+```
+
+```{r}
+watersheds <- unique(nodes$hydro_name_ana)
+```
+
+```{r}
+malaria <- malaria_raw %>% 
+  filter(hydro_name_ana %in% watersheds)
+```
+
+```{r message=FALSE}
+air_malaria <- malaria %>% 
+  group_by(hydro_name_ana, year, month) %>% 
+  summarise(
+    vivax = sum(vivax), falciparum = sum(falciparum), population = sum(population)
+  ) %>% 
+  mutate(ir_vivax = vivax / population, ir_falciparum = falciparum / population) %>% 
+  group_by(hydro_name_ana, year) %>% 
+  summarise(
+    air_vivax = mean(ir_vivax), air_falciparum = mean(ir_falciparum), 
+    .groups = "drop"
+  )
+```
+
+```{r}
+air_malaria_long <- air_malaria %>% 
+  pivot_longer(
+    c(air_vivax, air_falciparum), names_to = "specie", names_prefix = "air_", 
+    values_to = "air"
+  ) %>% 
+  mutate(
+    specie = factor(
+      specie, levels = c("vivax", "falciparum"), 
+      labels = c("P. vivax", "P. falciparum")
+    )
+  )
+```
+
+
+```{r fig.height=18, fig.width=18}
+hydro_grid <- data.frame(
+  code = c("Cuenca Napo", "Cuenca Putumayo", "Cuenca Tigre", "Cuenca Morona", "Intercuenca 49793", "Cuenca Nanay", "Intercuenca 4977", "Cuenca Itaya", "Cuenca Pastaza", "Intercuenca 49873", "Intercuenca 49795", "Intercuenca 49791", "Intercuenca 49799", "Intercuenca Medio Bajo Marañón", "Intercuenca Medio Marañón", "Intercuenca 49877", "Intercuenca 49871", "Intercuenca 49797", "Cuenca Manití", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca Bajo Huallaga", "Cuenca Potro", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Cuenca Paranapura", "Intercuenca 49913", "Intercuenca 49915"),
+  name = c("C Napo", "C Putumayo", "C Tigre", "C Morona", "IC 49793", "C Nanay", "IC 4977", "C Itaya", "C Pastaza", "IC 49873", "IC 49795", "IC 49791", "IC 49799", "IC Medio Bajo Marañón", "IC Medio Marañón", "IC 49877", "IC 49871", "IC 49797", "C Manití", "C Tahuayo", "IC Bajo Marañón", "IC Bajo Huallaga", "C Potro", "C Carhuapanas", "C Yavari", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "C Paranapura", "IC 49913", "IC 49915"),
+  row = c(3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 9) - 2,
+  col = c(9, 10, 8, 6, 10, 9, 11, 8, 7, 5, 9, 10, 8, 7, 6, 4, 5, 9, 10, 8, 7, 6, 4, 5, 9, 8, 7, 6, 5, 6, 6) - 3,
+  stringsAsFactors = FALSE
+)
+```
+
+```{r fig.height=15, fig.width=20, message=FALSE}
+plot_air_hydro <- 
+  air_malaria_long %>% 
+  ggplot() +
+  facet_geo(~ hydro_name_ana, grid = hydro_grid, label = "name") +
+  geom_area(
+    aes(year, y = 1000 * air, color = specie, fill = specie),
+    size = 1, alpha = 0.3, position = position_dodge(0)
+  ) +
+  # scale_y_continuous(limits = c(0, 150)) +
+  scale_x_continuous(n.breaks = 5) +
+  scale_color_npg() +
+  scale_fill_npg() +
+  labs(y = "Annual incidence rate", x = NULL) +
+  theme_bw() +
+  theme(
+    legend.position = "top", legend.title = element_blank(), 
+    text = element_text(size = 18)
+  )
+
+plot_air_hydro
+```
+
+```{r}
+ggsave(
+  "figs/air-hydro-facet.png", plot = plot_air_hydro, 
+  height = 15, width = 23, units = "in"
+)
+```
+
+
+
+
+
+

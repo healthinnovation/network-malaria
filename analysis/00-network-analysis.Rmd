@@ -14,6 +14,9 @@ library(tidyr)
 library(scales)
 library(ggraph)
 library(sf)
+library(ggsci)
+library(gtsummary)
+library(flextable)
 ```
 
 # Data reading
@@ -24,25 +27,17 @@ glimpse(nodes)
 ```
 
 ```{r}
-edges <- read_csv("data/processed/edges.csv", col_types = "ccd")
+edges <- read_csv("data/processed/edges.csv", col_types = "cccd")
 glimpse(edges)
 ```
 
 ```{r}
-villages_coord_raw <- st_read("data/raw/villages-original.gpkg")
-
-villages_coord <- villages_coord_raw %>% 
-  mutate(lon = st_coordinates(.)[,1], lat = st_coordinates(.)[,2]) %>% 
-  st_drop_geometry() %>% 
-  select(village_id = id_loc, lon, lat)
-
-nodes_coord <- nodes %>% 
-  left_join(villages_coord, by = "village_id")
+nodes <- mutate(nodes, hydrobasin = hydro_name_ana)
 ```
 
 ```{r}
-networks_raw <- nodes_coord %>% 
-  nest(nodes = -hydro_name_ana) %>% 
+networks_raw <- nodes %>% 
+  nest(nodes = -hydrobasin) %>% 
   mutate(ids = map(nodes, ~ pull(.x, 4))) %>% 
   mutate(edges = map(ids, ~ filter(edges, from %in% .x, to %in% .x))) %>% 
   mutate(size = map(edges, ~ dim(.x)[1])) %>% 
@@ -56,7 +51,6 @@ networks_raw
 ```{r}
 networks <- networks_raw %>% 
   select(-ids) %>% 
-  filter(size > 2) %>% 
   mutate(
     networks = map2(
       nodes, edges, 
@@ -77,112 +71,96 @@ networks
 ```
 
 ```{r}
-actual_edges <- networks %>% 
-  select(hydro_name_ana, edges) %>% 
-  unnest(edges)
-```
-
-```{r}
-actual_nodes_id <- unique(c(actual_edges$from, actual_edges$to))
-actual_nodes <- filter(nodes, village_id %in% actual_nodes_id)
-```
-
-```{r eval=FALSE, include=FALSE}
-# write_csv(actual_edges, "data/processed/actual-edges.csv")
-# write_csv(actual_nodes, "data/processed/actual-nodes.csv")
-```
-
-```{r}
 get_centralities <- function(graph) {
   graph_centralities <- graph %>% 
     mutate(
       degree = centrality_degree(),
-      str_d = centrality_degree(weights = distance),
-      str_d_inv = centrality_degree(weights = d_inv),
-      str_d_grav_pop = centrality_degree(weights = d_grav_pop),
-      str_d_mgrav_from_pop = centrality_degree(weights = d_mgrav_from_pop),
-      str_d_mgrav_to_pop = centrality_degree(weights = d_mgrav_to_pop),
-      str_d_mgrav_pop = centrality_degree(weights = d_mgrav_pop),
-      str_d_grav_adef = centrality_degree(weights = d_grav_adef),
-      str_d_mgravity_from_adef = centrality_degree(weights = d_mgravity_from_adef),
-      str_d_mgravity_to_adef = centrality_degree(weights = d_mgravity_to_adef),
-      str_d_mgrav_adef = centrality_degree(weights = d_mgrav_adef),
-      str_t = centrality_degree(weights = time),
-      str_t_inv = centrality_degree(weights = t_inv),
-      str_t_grav_pop = centrality_degree(weights = t_grav_pop),
-      str_t_mgrav_from_pop = centrality_degree(weights = t_mgrav_from_pop),
-      str_t_mgrav_to_pop = centrality_degree(weights = t_mgrav_to_pop),
-      str_t_mgrav_pop = centrality_degree(weights = t_mgrav_pop),
-      str_t_grav_adef = centrality_degree(weights = t_grav_adef),
-      str_t_mgravity_from_adef = centrality_degree(weights = t_mgravity_from_adef),
-      str_t_mgravity_to_adef = centrality_degree(weights = t_mgravity_to_adef),
-      str_t_mgrav_adef = centrality_degree(weights = t_mgrav_adef),
       closeness = centrality_closeness(),
-      close_d = centrality_closeness(weights = distance),
-      close_d_inv = centrality_closeness(weights = d_inv),
-      close_d_grav_pop = centrality_closeness(weights = d_grav_pop),
-      close_d_mgrav_from_pop = centrality_closeness(weights = d_mgrav_from_pop),
-      close_d_mgrav_to_pop = centrality_closeness(weights = d_mgrav_to_pop),
-      close_d_mgrav_pop = centrality_closeness(weights = d_mgrav_pop),
-      close_d_grav_adef = centrality_closeness(weights = d_grav_adef),
-      close_d_mgravity_from_adef = centrality_closeness(weights = d_mgravity_from_adef),
-      close_d_mgravity_to_adef = centrality_closeness(weights = d_mgravity_to_adef),
-      close_d_mgrav_adef = centrality_closeness(weights = d_mgrav_adef),
-      close_t = centrality_closeness(weights = time),
-      close_t_inv = centrality_closeness(weights = t_inv),
-      close_t_grav_pop = centrality_closeness(weights = t_grav_pop),
-      close_t_mgrav_from_pop = centrality_closeness(weights = t_mgrav_from_pop),
-      close_t_mgrav_to_pop = centrality_closeness(weights = t_mgrav_to_pop),
-      close_t_mgrav_pop = centrality_closeness(weights = t_mgrav_pop),
-      close_t_grav_adef = centrality_closeness(weights = t_grav_adef),
-      close_t_mgravity_from_adef = centrality_closeness(weights = t_mgravity_from_adef),
-      close_t_mgravity_to_adef = centrality_closeness(weights = t_mgravity_to_adef),
-      close_t_mgrav_adef = centrality_closeness(weights = t_mgrav_adef),
       betweenness = centrality_betweenness(),
-      bet_d = centrality_betweenness(weights = distance),
-      bet_d_inv = centrality_betweenness(weights = d_inv),
-      bet_d_grav_pop = centrality_betweenness(weights = d_grav_pop),
-      bet_d_mgrav_from_pop = centrality_betweenness(weights = d_mgrav_from_pop),
-      bet_d_mgrav_to_pop = centrality_betweenness(weights = d_mgrav_to_pop),
-      bet_d_mgrav_pop = centrality_betweenness(weights = d_mgrav_pop),
-      bet_d_grav_adef = centrality_betweenness(weights = d_grav_adef),
-      bet_d_mgravity_from_adef = centrality_betweenness(weights = d_mgravity_from_adef),
-      bet_d_mgravity_to_adef = centrality_betweenness(weights = d_mgravity_to_adef),
-      bet_d_mgrav_adef = centrality_betweenness(weights = d_mgrav_adef),
-      bet_t = centrality_betweenness(weights = time),
-      bet_t_inv = centrality_betweenness(weights = t_inv),
-      bet_t_grav_pop = centrality_betweenness(weights = t_grav_pop),
-      bet_t_mgrav_from_pop = centrality_betweenness(weights = t_mgrav_from_pop),
-      bet_t_mgrav_to_pop = centrality_betweenness(weights = t_mgrav_to_pop),
-      bet_t_mgrav_pop = centrality_betweenness(weights = t_mgrav_pop),
-      bet_t_grav_adef = centrality_betweenness(weights = t_grav_adef),
-      bet_t_mgravity_from_adef = centrality_betweenness(weights = t_mgravity_from_adef),
-      bet_t_mgravity_to_adef = centrality_betweenness(weights = t_mgravity_to_adef),
-      bet_t_mgrav_adef = centrality_betweenness(weights = t_mgrav_adef),
       eigen = centrality_eigen(),
-      eigen_d = centrality_eigen(weights = distance),
-      eigen_d_inv = centrality_eigen(weights = d_inv),
-      eigen_d_grav_pop = centrality_eigen(weights = d_grav_pop),
-      eigen_d_mgrav_from_pop = centrality_eigen(weights = d_mgrav_from_pop),
-      eigen_d_mgrav_to_pop = centrality_eigen(weights = d_mgrav_to_pop),
-      eigen_d_mgrav_pop = centrality_eigen(weights = d_mgrav_pop),
-      eigen_d_grav_adef = centrality_eigen(weights = d_grav_adef),
-      eigen_d_mgravity_from_adef = centrality_eigen(weights = d_mgravity_from_adef),
-      eigen_d_mgravity_to_adef = centrality_eigen(weights = d_mgravity_to_adef),
-      eigen_d_mgrav_adef = centrality_eigen(weights = d_mgrav_adef),
-      eigen_t = centrality_eigen(weights = time),
-      eigen_t_inv = centrality_eigen(weights = t_inv),
-      eigen_t_grav_pop = centrality_eigen(weights = t_grav_pop),
-      eigen_t_mgrav_from_pop = centrality_eigen(weights = t_mgrav_from_pop),
-      eigen_t_mgrav_to_pop = centrality_eigen(weights = t_mgrav_to_pop),
-      eigen_t_mgrav_pop = centrality_eigen(weights = t_mgrav_pop),
-      eigen_t_grav_adef = centrality_eigen(weights = t_grav_adef),
-      eigen_t_mgravity_from_adef = centrality_eigen(weights = t_mgravity_from_adef),
-      eigen_t_mgravity_to_adef = centrality_eigen(weights = t_mgravity_to_adef),
-      eigen_t_mgrav_adef = centrality_eigen(weights = t_mgrav_adef)
+      d_stre = centrality_degree(weights = distance),
+      d_close = centrality_closeness(weights = distance),
+      d_between = centrality_betweenness(weights = distance),
+      d_eigen = centrality_eigen(weights = distance),
+      d_inv_stre = centrality_degree(weights = d_inv),
+      d_inv_close = centrality_closeness(weights = d_inv),
+      d_inv_between = centrality_betweenness(weights = d_inv),
+      d_inv_eigen = centrality_eigen(weights = d_inv),
+      d_pop_grav_stre = centrality_degree(weights = d_pop_grav),
+      d_pop_grav_close = centrality_closeness(weights = d_pop_grav),
+      d_pop_grav_between = centrality_betweenness(weights = d_pop_grav),
+      d_pop_grav_eigen = centrality_eigen(weights = d_pop_grav),
+      d_pop_mgrav_from_stre = centrality_degree(weights = d_pop_mgrav_from),
+      d_pop_mgrav_from_close = centrality_closeness(weights = d_pop_mgrav_from),
+      d_pop_mgrav_from_between = centrality_betweenness(weights = d_pop_mgrav_from),
+      d_pop_mgrav_from_eigen = centrality_eigen(weights = d_pop_mgrav_from),
+      d_pop_mgrav_to_stre = centrality_degree(weights = d_pop_mgrav_to),
+      d_pop_mgrav_to_close = centrality_closeness(weights = d_pop_mgrav_to),
+      d_pop_mgrav_to_between = centrality_betweenness(weights = d_pop_mgrav_to),
+      d_pop_mgrav_to_eigen = centrality_eigen(weights = d_pop_mgrav_to),
+      d_pop_mgrav_stre = centrality_degree(weights = d_pop_mgrav),
+      d_pop_mgrav_close = centrality_closeness(weights = d_pop_mgrav),
+      d_pop_mgrav_between = centrality_betweenness(weights = d_pop_mgrav),
+      d_pop_mgrav_eigen = centrality_eigen(weights = d_pop_mgrav),
+      d_adef_grav_stre = centrality_degree(weights = d_adef_grav),
+      d_adef_grav_close = centrality_closeness(weights = d_adef_grav),
+      d_adef_grav_between = centrality_betweenness(weights = d_adef_grav),
+      d_adef_grav_eigen = centrality_eigen(weights = d_adef_grav),
+      d_adef_mgrav_from_stre = centrality_degree(weights = d_adef_mgrav_from),
+      d_adef_mgrav_from_close = centrality_closeness(weights = d_adef_mgrav_from),
+      d_adef_mgrav_from_between = centrality_betweenness(weights = d_adef_mgrav_from),
+      d_adef_mgrav_from_eigen = centrality_eigen(weights = d_adef_mgrav_from),
+      d_adef_mgrav_to_stre = centrality_degree(weights = d_adef_mgrav_to),
+      d_adef_mgrav_to_close = centrality_closeness(weights = d_adef_mgrav_to),
+      d_adef_mgrav_to_between = centrality_betweenness(weights = d_adef_mgrav_to),
+      d_adef_mgrav_to_eigen = centrality_eigen(weights = d_adef_mgrav_to),
+      d_adef_mgrav_stre = centrality_degree(weights = d_adef_mgrav),
+      d_adef_mgrav_close = centrality_closeness(weights = d_adef_mgrav),
+      d_adef_mgrav_between = centrality_betweenness(weights = d_adef_mgrav),
+      d_adef_mgrav_eigen = centrality_eigen(weights = d_adef_mgrav),
+      t_stre = centrality_degree(weights = time),
+      t_close = centrality_closeness(weights = time),
+      t_between = centrality_betweenness(weights = time),
+      t_eigen = centrality_eigen(weights = time),
+      t_inv_stre = centrality_degree(weights = t_inv),
+      t_inv_close = centrality_closeness(weights = t_inv),
+      t_inv_between = centrality_betweenness(weights = t_inv),
+      t_inv_eigen = centrality_eigen(weights = t_inv),
+      t_pop_grav_stre = centrality_degree(weights = t_pop_grav),
+      t_pop_grav_close = centrality_closeness(weights = t_pop_grav),
+      t_pop_grav_between = centrality_betweenness(weights = t_pop_grav),
+      t_pop_grav_eigen = centrality_eigen(weights = t_pop_grav),
+      t_pop_mgrav_from_stre = centrality_degree(weights = t_pop_mgrav_from),
+      t_pop_mgrav_from_close = centrality_closeness(weights = t_pop_mgrav_from),
+      t_pop_mgrav_from_between = centrality_betweenness(weights = t_pop_mgrav_from),
+      t_pop_mgrav_from_eigen = centrality_eigen(weights = t_pop_mgrav_from),
+      t_pop_mgrav_to_stre = centrality_degree(weights = t_pop_mgrav_to),
+      t_pop_mgrav_to_close = centrality_closeness(weights = t_pop_mgrav_to),
+      t_pop_mgrav_to_between = centrality_betweenness(weights = t_pop_mgrav_to),
+      t_pop_mgrav_to_eigen = centrality_eigen(weights = t_pop_mgrav_to),
+      t_pop_mgrav_stre = centrality_degree(weights = t_pop_mgrav),
+      t_pop_mgrav_close = centrality_closeness(weights = t_pop_mgrav),
+      t_pop_mgrav_between = centrality_betweenness(weights = t_pop_mgrav),
+      t_pop_mgrav_eigen = centrality_eigen(weights = t_pop_mgrav),
+      t_adef_grav_stre = centrality_degree(weights = t_adef_grav),
+      t_adef_grav_close = centrality_closeness(weights = t_adef_grav),
+      t_adef_grav_between = centrality_betweenness(weights = t_adef_grav),
+      t_adef_grav_eigen = centrality_eigen(weights = t_adef_grav),
+      t_adef_mgrav_from_stre = centrality_degree(weights = t_adef_mgrav_from),
+      t_adef_mgrav_from_close = centrality_closeness(weights = t_adef_mgrav_from),
+      t_adef_mgrav_from_between = centrality_betweenness(weights = t_adef_mgrav_from),
+      t_adef_mgrav_from_eigen = centrality_eigen(weights = t_adef_mgrav_from),
+      t_adef_mgrav_to_stre = centrality_degree(weights = t_adef_mgrav_to),
+      t_adef_mgrav_to_close = centrality_closeness(weights = t_adef_mgrav_to),
+      t_adef_mgrav_to_between = centrality_betweenness(weights = t_adef_mgrav_to),
+      t_adef_mgrav_to_eigen = centrality_eigen(weights = t_adef_mgrav_to),
+      t_adef_mgrav_stre = centrality_degree(weights = t_adef_mgrav),
+      t_adef_mgrav_close = centrality_closeness(weights = t_adef_mgrav),
+      t_adef_mgrav_between = centrality_betweenness(weights = t_adef_mgrav),
+      t_adef_mgrav_eigen = centrality_eigen(weights = t_adef_mgrav),
     ) %>% 
-    activate(nodes) %>% 
-    mutate(across(str_d:eigen_t_mgrav_adef, rescale))
+    activate(nodes) %>%
+    mutate(across(degree:t_adef_mgrav_eigen, rescale))
 }
 ```
 
@@ -197,85 +175,731 @@ centralities
 
 ```{r}
 village_centralities <- centralities %>% 
-  select(hydro_name_ana, size, order, edge_density, centralities) %>% 
   mutate(centralities_dfs = map(centralities, ~ as_tibble(activate(.x, nodes)))) %>% 
-  select(-centralities) %>% 
+  select(centralities_dfs, size, order, edge_density) %>% 
   unnest(centralities_dfs)
 ```
 
-```{r}
+```{r include=FALSE}
 processed_path <- "data/processed/"
 file_name <- "village-centralities.csv"
 file_path <- fs::path(processed_path, file_name)
-# write_csv(village_centralities, file_path, na = "")
+write_csv(village_centralities, file_path, na = "")
+```
+
+# Summary tables
+
+```{r}
+centralities_table <- village_centralities %>% 
+  select(hydro_name_ana, degree:t_adef_mgrav_eigen) %>% 
+  tbl_summary(
+    by = hydro_name_ana,
+    statistic = all_continuous() ~ c("{mean} ({sd})"),
+    digits = all_continuous() ~ c(2, 2),
+    type = everything() ~ "continuous",
+  ) %>% 
+  add_overall(last = TRUE) %>% 
+  as_flex_table()
+```
+
+```{r include=FALSE}
+save_as_docx("Centralities summary table" = centralities_table, path = "centralities-table.docx")
+```
+
+```{r}
+weights_table <- edges %>% 
+  select(hydro_name_ana, distance:t_adef_mgrav) %>% 
+  tbl_summary(
+    by = hydro_name_ana,
+    statistic = all_continuous() ~ c("{mean} ({sd})"),
+    digits = all_continuous() ~ c(2, 2),
+    type = everything() ~ "continuous",
+  ) %>% 
+  add_overall(last = TRUE) %>% 
+  as_flex_table()
+```
+
+```{r}
+save_as_docx("Weights summary table" = weights_table, path = "edge-weights-table.docx")
 ```
 
 # Flow maps
 
 ```{r}
-g <- centralities$centralities[[5]]
+graphs <- bind_graphs(centralities$centralities)
 ```
 
 ```{r}
-g %>% 
-  ggraph(layout = "linear", circular = TRUE) +
-  geom_edge_arc(aes(alpha = d_inv)) + 
-  geom_node_point(aes(size = population))
-```
-
-```{r}
-g %>% 
-  ggraph(layout = "circle") +
-  geom_edge_fan(aes(alpha = d_inv)) + 
-  geom_node_point(aes(size = population))
-```
-
-```{r}
-coord <- g %>% 
+village_coord <- graphs %>% 
   activate(nodes) %>% 
   select(x = lon, y = lat) %>% 
   as_tibble()
 ```
 
-
 ```{r}
-layout <- create_layout(g, layout = coord)
+graphs_layout <- create_layout(graphs, layout = village_coord)
 ```
 
 ```{r}
-g %>% 
-  ggraph(graph = layout) +
-  geom_edge_arc(aes(alpha = rescale(d_inv, to = c(0.1, 0.5))), strength = 0.1) + 
-  geom_node_point(aes(size = population)) +
-  scale_alpha_manual(range = c(0.1, 0.5))
+set.seed(1)
+base_palette <- sample(
+  c(
+    "#F94144", "#F3722C", "#F8961E", "#F9844A", "#F9C74F", "#90BE6D", "#43AA8B",
+    "#4D908E", "#577590", "#277DA1", "#F7A072", "#EDDEA4", "#8EA604", "#00CFC1",
+    "#485696", "#37323E", "#985277", "#5C374C", "#7678ED", "#CE4257", "#FFBD00"
+  )
+)
+graph_palette <- colorRampPalette(base_palette)
+show_col(graph_palette(31))
 ```
 
 ```{r}
-g %>% 
-  ggraph(graph = layout) +
-  geom_edge_arc(aes(alpha = d_inv), strength = 0.1) + 
-  geom_node_point(aes(size = population))
+graph_layout_kk <- create_layout(graphs, layout = "kk")
+graph_layout_stress <- create_layout(graphs, layout = "stress")
 ```
 
 ```{r}
-alpha_values <- g %>% 
-  activate(edges) %>% 
-  pull(d_inv) %>% 
-  rescale(to = c(0.1, 0.7))
+plot_full_graph <- function(graphs, layout, group, weight, centrality, weight_label, centrality_label) {
+  plt <- graphs %>% 
+    ggraph(layout = "kk") +
+    geom_edge_arc(
+      aes(alpha = {{ weight }}, color = as.factor({{ group }})), strength = 0.1
+    ) + 
+    geom_node_point(aes(size = {{ centrality }}, color = as.factor({{ group }}))) +
+    scale_color_manual(
+      limits = as.factor(pull(layout, {{ group }})), 
+      values = graph_palette(nrow(layout)),
+      guide = "none"
+    ) +
+    scale_edge_color_manual(
+      limits = as.factor(pull(layout, {{ group }})), 
+      values = graph_palette(nrow(layout)),
+      guide = "none"
+    ) +
+    scale_size_continuous(name = centrality_label, guide = "legend") +
+    scale_edge_alpha_continuous(name = weight_label) +
+    theme_graph(base_family = "sans") +
+    theme(
+      legend.position = "top", legend.box = "vertical", 
+      text = element_text(size = 15)
+    )
+  
+  plt
+}
 ```
 
+## Distance
 
 ```{r}
-g %>% 
-  ggraph(graph = layout) +
-  geom_edge_arc(aes(alpha = d_inv), strength = 0.1) + 
-  geom_node_point(aes(size = population)) +
-  scale_edge_alpha(range = c(0.02, 0.05))
+plot_d_pop_grav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_pop_grav, 
+  centrality = d_pop_grav_close,
+  weight_label = "Gravity model with distance and population",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_pop_grav_close.png", plot = plot_d_pop_grav_close, 
+  height = 10, width = 9.5, units = "in"
+)
 ```
 
 ```{r}
-ggsave("figs/plot-graph.pdf", device = "pdf", dpi = 300)
+plot_d_pop_mgrav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_pop_mgrav, 
+  centrality = d_pop_mgrav_close,
+  weight_label = "Mod. gravity model with distance and population",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_pop_mgrav_close.png", plot = plot_d_pop_mgrav_close, 
+  height = 10, width = 9.5, units = "in"
+)
 ```
+
+```{r}
+plot_d_pop_grav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_pop_grav, 
+  centrality = d_pop_grav_between,
+  weight_label = "Gravity model with distance and population",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_pop_grav_between.png", plot = plot_d_pop_grav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_d_pop_mgrav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_pop_mgrav, 
+  centrality = d_pop_mgrav_between,
+  weight_label = "Mod. gravity model with distance and population",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_pop_mgrav_between.png", plot = plot_d_pop_mgrav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_d_adef_grav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_adef_grav, 
+  centrality = d_adef_grav_close,
+  weight_label = "Gravity model with distance and forest loss",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_adef_grav_close.png", plot = plot_d_adef_grav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_d_adef_mgrav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_adef_mgrav, 
+  centrality = d_adef_mgrav_close,
+  weight_label = "Mod. gravity model with distance and forest loss",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_adef_mgrav_close.png", plot = plot_d_adef_mgrav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_d_adef_grav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_adef_grav, 
+  centrality = d_adef_grav_between,
+  weight_label = "Gravity model with distance and forest loss",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_adef_grav_between.png", plot = plot_d_adef_grav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_d_adef_mgrav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = d_adef_mgrav, 
+  centrality = d_adef_mgrav_between,
+  weight_label = "Mod. gravity model with distance and forest loss",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/d_adef_mgrav_between.png", plot = plot_d_adef_mgrav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+## Travel time
+
+```{r}
+plot_t_pop_grav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_pop_grav, 
+  centrality = t_pop_grav_close,
+  weight_label = "Gravity model with travel time and population",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_pop_grav_close.png", plot = plot_t_pop_grav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_pop_mgrav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_pop_mgrav, 
+  centrality = t_pop_mgrav_close,
+  weight_label = "Mod. gravity model with travel time and population",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_pop_mgrav_close.png", plot = plot_t_pop_mgrav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_pop_grav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_pop_grav, 
+  centrality = t_pop_grav_between,
+  weight_label = "Gravity model with travel time and population",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_pop_grav_between.png", plot = plot_t_pop_grav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_pop_mgrav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_pop_mgrav, 
+  centrality = t_pop_mgrav_between,
+  weight_label = "Mod. gravity model with travel time and population",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_pop_mgrav_between.png", plot = plot_t_pop_mgrav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_adef_grav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_adef_grav, 
+  centrality = t_adef_grav_close,
+  weight_label = "Gravity model with travel time and forest loss",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_adef_grav_close.png", plot = plot_t_adef_grav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_adef_mgrav_close <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_adef_mgrav, 
+  centrality = t_adef_mgrav_close,
+  weight_label = "Mod. gravity model with travel time and forest loss",
+  centrality_label = "Closeness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_adef_mgrav_close.png", plot = plot_t_adef_mgrav_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_adef_grav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_adef_grav, 
+  centrality = t_adef_grav_between,
+  weight_label = "Gravity model with travel time and forest loss",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_adef_grav_between.png", plot = plot_t_adef_grav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_t_adef_mgrav_between <- plot_full_graph(
+  graphs = graphs, layout = graph_layout,  
+  weight = t_adef_mgrav, 
+  centrality = t_adef_mgrav_between,
+  weight_label = "Mod. gravity model with travel time and forest loss",
+  centrality_label = "Betweenness centrality score",
+  group = hydro_name_ana
+)
+
+ggsave(
+  "figs/full-graph/t_adef_mgrav_between.png", plot = plot_t_adef_mgrav_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r warning=FALSE, fig.height=6.8, fig.width=9.5}
+graphs %>% 
+  ggraph(layout = 'kk') +
+  geom_edge_arc(
+    aes(alpha = d_pop_grav, color = as.factor(hydro_name_ana)), strength = 0.1
+  ) + 
+  geom_node_point(aes(size = d_pop_grav_eigen, color = as.factor(hydro_name_ana))) +
+  scale_color_manual(
+    limits = as.factor(graph_layout$hydro_name_ana), 
+    values = graph_palette(nrow(graph_layout)),
+    guide = "none"
+  ) +
+  scale_edge_color_manual(
+    limits = as.factor(graph_layout$hydro_name_ana), 
+    values = graph_palette(nrow(graph_layout)),
+    guide = "none"
+  ) +
+  scale_size_continuous(
+    name = "Eigenvector centrality\nscore", guide = "legend"
+  ) +
+  scale_edge_alpha_continuous(
+    name = "Gravity model weight with\ndistance and population"
+  ) +
+  theme_graph() +
+  theme(text = element_text(size = 14.5))
+```
+
+# Facets
+
+```{r}
+plot_facet_graph <- function(graphs, layout, facet, weight, centrality, weight_label, centrality_label) {
+  plt <- graphs %>% 
+  ggraph(layout = "stress") +
+  facet_nodes(vars({{ facet }}), ncol = 4, scales = "free") +
+  geom_edge_arc(aes(alpha = {{ weight }}, color = as.factor({{ facet }})), strength = 0.1) + 
+  geom_node_point(aes(size = {{ centrality }}, colour = as.factor({{ facet }}))) +
+  scale_color_manual(
+    limits = as.factor(pull(layout, {{ facet }})), 
+    values = graph_palette(nrow(layout)),
+    guide = "none"
+  ) +
+  scale_edge_color_manual(
+    limits = as.factor(pull(layout, {{ facet }})), 
+    values = graph_palette(nrow(layout)),
+    guide = "none"
+  ) +
+  scale_size_continuous(name = centrality_label, guide = "legend") +
+  scale_edge_alpha_continuous(name = weight_label) +
+  theme_graph(base_family = "sans", strip_text_size = 14, strip_text_face = "plain") +
+  theme(
+    legend.position = "top", legend.box = "vertical", 
+    text = element_text(size = 15)
+  )
+  
+  plt
+}
+```
+
+## Facet distance
+
+```{r}
+plot_facet_pop_grav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, facet = hydro_name_ana,
+  weight = d_pop_grav, centrality = d_pop_grav_close, 
+  weight_label = "Gravity model weight with distance and population",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figs/facet-graph/d_pop_grav_close.png", plot = plot_facet_pop_grav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_mgrav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
+  centrality = d_pop_mgrav_close, 
+  weight_label = "Mod. gravity model weight with distance and population",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_grav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_pop_grav, 
+  centrality = d_pop_grav_between, 
+  weight_label = "Gravity model weight with distance and population",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_pop_grav_between.png", plot = plot_facet_pop_grav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_mgrav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
+  centrality = d_pop_mgrav_between, 
+  weight_label = "Mod. gravity model weight with distance and population",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_grav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_adef_grav, 
+  centrality = d_adef_grav_close, 
+  weight_label = "Gravity model weight with distance and forest loss",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_adef_grav_close.png", plot = plot_facet_adef_grav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_mgrav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
+  centrality = d_adef_mgrav_close, 
+  weight_label = "Mod. gravity model weight with distance and forest loss",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_grav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_adef_grav, 
+  centrality = d_adef_grav_between, 
+  weight_label = "Gravity model weight with distance and forest loss",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_adef_grav_between.png", plot = plot_facet_adef_grav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_mgrav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
+  centrality = d_adef_mgrav_between, 
+  weight_label = "Mod. gravity model weight with distance and forest loss",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/d_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+## Facet time
+
+```{r}
+plot_facet_pop_grav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_pop_grav, 
+  centrality = t_pop_grav_close, 
+  weight_label = "Gravity model weight with distance and population",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_pop_grav_close.png", plot = plot_facet_pop_grav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_mgrav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
+  centrality = t_pop_mgrav_close, 
+  weight_label = "Mod. gravity model weight with distance and population",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_grav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_pop_grav, 
+  centrality = t_pop_grav_between, 
+  weight_label = "Gravity model weight with distance and population",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_pop_grav_between.png", plot = plot_facet_pop_grav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_pop_mgrav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
+  centrality = t_pop_mgrav_between, 
+  weight_label = "Mod. gravity model weight with distance and population",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_grav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_adef_grav, 
+  centrality = t_adef_grav_close, 
+  weight_label = "Gravity model weight with distance and forest loss",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_adef_grav_close.png", plot = plot_facet_adef_grav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_mgrav_close <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
+  centrality = t_adef_mgrav_close, 
+  weight_label = "Mod. gravity model weight with distance and forest loss",
+  centrality_label = "Closeness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_grav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_adef_grav, 
+  centrality = t_adef_grav_between, 
+  weight_label = "Gravity model weight with distance and forest loss",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_adef_grav_between.png", plot = plot_facet_adef_grav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+plot_facet_adef_mgrav_between <- plot_facet_graph(
+  graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
+  centrality = t_adef_mgrav_between, 
+  weight_label = "Mod. gravity model weight with distance and forest loss",
+  centrality_label = "Betweenness centrality",
+  facet = hydro_name_ana
+)
+
+ggsave(
+  "figs/facet-graph/t_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r fig.height=20, fig.width=14}
+graphs %>% 
+  ggraph(layout = "stress") +
+  geom_edge_arc(aes(alpha = d_pop_grav, color = as.factor(hydro_name_ana)), strength = 0.1) + 
+  geom_node_point(aes(size = d_pop_grav_eigen, color = as.factor(hydro_name_ana))) +
+  scale_color_manual(
+    limits = as.factor(graph_layout_stress$hydro_name_ana), 
+    values = graph_palette(nrow(graph_layout_stress)),
+    guide = "none"
+  ) +
+  scale_edge_color_manual(
+    limits = as.factor(graph_layout_stress$hydro_name_ana), 
+    values = graph_palette(nrow(graph_layout_stress)),
+    guide = "none"
+  ) +
+  scale_size_continuous(
+    name = "Eigenvector centrality score", guide = "legend"
+  ) +
+  scale_edge_alpha_continuous(
+    name = "Gravity model weight with distance and population"
+  ) +
+  facet_nodes(~ hydro_name_ana, ncol = 4, scales = "free") +
+  theme_graph(base_family = "sans", strip_text_size = 14, strip_text_face = "plain") +
+  theme(
+    legend.position = "top", legend.box = "vertical", 
+    text = element_text(size = 15)
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -9,9 +9,7 @@ library(readr)
 
 output_path <- "analysis/data/interim/"
 
-ee_Initialize(user = "diego.villa@upch.pe")
-
-villages_sf <- st_read("analysis/data/raw/village-projected.gpkg") %>%
+villages_sf <- st_read("analysis/data/raw/villages-projected.gpkg") %>%
   select(
     province, district, village, village_id = id_loc, population = nrohab,
     river_name = RiverName, hydro_name_ana = HydroNameANA,
@@ -19,11 +17,19 @@ villages_sf <- st_read("analysis/data/raw/village-projected.gpkg") %>%
   )
 
 villages <- villages_sf %>%
-  st_drop_geometry()
+  st_drop_geometry() %>%
+  mutate(
+    hydro_name_ana = ifelse(
+      hydro_name_ana == "Intercuenca Bajo Huallga", "Intercuenca Bajo Huallaga",
+      hydro_name_ana
+    )
+  )
 
 villages_filename <- "villages.csv"
 villages_output_path <- path(output_path, villages_filename)
 write_csv(villages, villages_output_path, na = "")
+
+ee_Initialize(user = "diego.villa@upch.pe")
 
 villages_ee <- villages_sf %>%
   select(village_id) %>%
