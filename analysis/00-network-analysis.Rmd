@@ -71,7 +71,8 @@ networks
 ```
 
 ```{r}
-get_centralities <- function(graph) {
+# Don't run
+get_centralities_full <- function(graph) {
   graph_centralities <- graph %>% 
     mutate(
       degree = centrality_degree(),
@@ -161,6 +162,52 @@ get_centralities <- function(graph) {
     ) %>% 
     activate(nodes) %>%
     mutate(across(degree:t_adef_mgrav_eigen, rescale))
+}
+```
+
+Strength and eigenvector centrality measures interpret weights as connection strength (higher weights, more connected), whereas closeness and betweenness centrality measures interpret weights as distances (higher weights, less connected).
+
+```{r}
+get_centralities <- function(graph) {
+  graph_centralities <- graph %>% 
+    mutate(
+      degree = centrality_degree(),
+      closeness = centrality_closeness(),
+      betweenness = centrality_betweenness(),
+      # Distance
+      eigen = centrality_eigen(),
+      d_stre = centrality_degree(weights = 1/distance),
+      d_close = centrality_closeness(weights = distance),
+      d_between = centrality_betweenness(weights = distance),
+      d_eigen = centrality_eigen(weights = 1/distance),
+      # Gravity + population
+      d_pop_grav_stre = centrality_degree(weights = d_pop_grav),
+      d_pop_grav_close = centrality_closeness(weights = 1/d_pop_grav),
+      d_pop_grav_between = centrality_betweenness(weights = 1/d_pop_grav),
+      d_pop_grav_eigen = centrality_eigen(weights = d_pop_grav),
+      # Gravity + forest loss
+      d_adef_grav_stre = centrality_degree(weights = d_adef_grav),
+      d_adef_grav_close = centrality_closeness(weights = 1/d_adef_grav),
+      d_adef_grav_between = centrality_betweenness(weights = 1/d_adef_grav),
+      d_adef_grav_eigen = centrality_eigen(weights = d_adef_grav),
+      # Time travel
+      t_stre = centrality_degree(weights = 1/time),
+      t_close = centrality_closeness(weights = time),
+      t_between = centrality_betweenness(weights = time),
+      t_eigen = centrality_eigen(weights = 1/time),
+      # Gravity + population
+      t_pop_grav_stre = centrality_degree(weights = t_pop_grav),
+      t_pop_grav_close = centrality_closeness(weights = 1/t_pop_grav),
+      t_pop_grav_between = centrality_betweenness(weights = 1/t_pop_grav),
+      t_pop_grav_eigen = centrality_eigen(weights = t_pop_grav),
+      # Gravity + forest loss
+      t_adef_grav_stre = centrality_degree(weights = t_adef_grav),
+      t_adef_grav_close = centrality_closeness(weights = 1/t_adef_grav),
+      t_adef_grav_between = centrality_betweenness(weights = 1/t_adef_grav),
+      t_adef_grav_eigen = centrality_eigen(weights = t_adef_grav)
+    ) %>% 
+    activate(nodes) %>%
+    mutate(across(degree:t_adef_grav_eigen, rescale))
 }
 ```
 
