@@ -69,14 +69,25 @@ air_malaria_long <- air_malaria %>%
 
 
 ```{r fig.height=18, fig.width=18}
+# hydro_grid <- data.frame(
+#   code = c("Cuenca Napo", "Cuenca Putumayo", "Cuenca Tigre", "Cuenca Morona", "Intercuenca 49793", "Cuenca Nanay", "Intercuenca 4977", "Cuenca Itaya", "Cuenca Pastaza", "Intercuenca 49873", "Intercuenca 49795", "Intercuenca 49791", "Intercuenca 49799", "Intercuenca Medio Bajo Marañón", "Intercuenca Medio Marañón", "Intercuenca 49877", "Intercuenca 49871", "Intercuenca 49797", "Cuenca Manití", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca Bajo Huallaga", "Cuenca Potro", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Cuenca Paranapura", "Intercuenca 49913", "Intercuenca 49915"),
+#   name = c("C Napo", "C Putumayo", "C Tigre", "C Morona", "IC 49793", "C Nanay", "IC 4977", "C Itaya", "C Pastaza", "IC 49873", "IC 49795", "IC 49791", "IC 49799", "IC Medio Bajo Marañón", "IC Medio Marañón", "IC 49877", "IC 49871", "IC 49797", "C Manití", "C Tahuayo", "IC Bajo Marañón", "IC Bajo Huallaga", "C Potro", "C Carhuapanas", "C Yavari", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "C Paranapura", "IC 49913", "IC 49915"),
+#   row = c(3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 9) - 2,
+#   col = c(9, 10, 8, 6, 10, 9, 11, 8, 7, 5, 9, 10, 8, 7, 6, 4, 5, 9, 10, 8, 7, 6, 4, 5, 9, 8, 7, 6, 5, 6, 6) - 3,
+#   stringsAsFactors = FALSE
+# )
+```
+
+```{r}
 hydro_grid <- data.frame(
-  code = c("Cuenca Napo", "Cuenca Putumayo", "Cuenca Tigre", "Cuenca Morona", "Intercuenca 49793", "Cuenca Nanay", "Intercuenca 4977", "Cuenca Itaya", "Cuenca Pastaza", "Intercuenca 49873", "Intercuenca 49795", "Intercuenca 49791", "Intercuenca 49799", "Intercuenca Medio Bajo Marañón", "Intercuenca Medio Marañón", "Intercuenca 49877", "Intercuenca 49871", "Intercuenca 49797", "Cuenca Manití", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca Bajo Huallaga", "Cuenca Potro", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Cuenca Paranapura", "Intercuenca 49913", "Intercuenca 49915"),
-  name = c("C Napo", "C Putumayo", "C Tigre", "C Morona", "IC 49793", "C Nanay", "IC 4977", "C Itaya", "C Pastaza", "IC 49873", "IC 49795", "IC 49791", "IC 49799", "IC Medio Bajo Marañón", "IC Medio Marañón", "IC 49877", "IC 49871", "IC 49797", "C Manití", "C Tahuayo", "IC Bajo Marañón", "IC Bajo Huallaga", "C Potro", "C Carhuapanas", "C Yavari", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "C Paranapura", "IC 49913", "IC 49915"),
-  row = c(3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 8, 8, 9) - 2,
-  col = c(9, 10, 8, 6, 10, 9, 11, 8, 7, 5, 9, 10, 8, 7, 6, 4, 5, 9, 10, 8, 7, 6, 4, 5, 9, 8, 7, 6, 5, 6, 6) - 3,
+  code = c("Cuenca Putumayo", "Cuenca Tigre", "Cuenca Napo", "Intercuenca 49793", "Cuenca Morona", "Cuenca Itaya", "Cuenca Nanay", "Intercuenca 4977", "Intercuenca 49795", "Intercuenca Medio Marañón", "Cuenca Pastaza", "Intercuenca 49799", "Intercuenca 49791", "Intercuenca 49797", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca 49873", "Intercuenca Medio Bajo Marañón", "Cuenca Manití", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Intercuenca 49871", "Intercuenca Bajo Huallaga", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49913", "Intercuenca 49915", "Intercuenca 49877", "Cuenca Potro", "Cuenca Paranapura"),
+  name = c("C Putumayo", "C Tigre", "C Napo", "IC 49793", "C Morona", "C Itaya", "C Nanay", "IC 4977", "IC 49795", "IC Medio Marañón", "C Pastaza", "IC 49799", "IC 49791", "IC 49797", "C Tahuayo", "IC Bajo Marañón", "IC 49873", "IC Medio Bajo Marañón", "C Manití", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "IC 49871", "IC Bajo Huallaga", "C Carhuapanas", "C Yavari", "IC 49913", "IC 49915", "IC 49877", "C Potro", "C Paranapura"),
+  row = c(1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7),
+  col = c(6, 5, 6, 7, 4, 5, 6, 8, 7, 3, 4, 6, 9, 8, 7, 5, 3, 4, 8, 7, 6, 5, 2, 3, 4, 7, 6, 5, 2, 3, 4),
   stringsAsFactors = FALSE
 )
 ```
+
 
 ```{r fig.height=15, fig.width=20, message=FALSE}
 plot_air_hydro <- 
