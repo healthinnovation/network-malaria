@@ -238,7 +238,7 @@ write_csv(village_centralities, file_path, na = "")
 
 ```{r}
 centralities_table <- village_centralities %>% 
-  select(hydro_name_ana, degree:t_adef_mgrav_eigen) %>% 
+  select(hydro_name_ana, degree:t_adef_grav_eigen) %>% 
   tbl_summary(
     by = hydro_name_ana,
     statistic = all_continuous() ~ c("{mean} ({sd})"),
@@ -255,7 +255,10 @@ save_as_docx("Centralities summary table" = centralities_table, path = "centrali
 
 ```{r}
 weights_table <- edges %>% 
-  select(hydro_name_ana, distance:t_adef_mgrav) %>% 
+  select(
+    hydro_name_ana, distance:time, d_pop_grav, d_adef_grav, t_pop_grav, 
+    t_adef_grav
+  ) %>% 
   tbl_summary(
     by = hydro_name_ana,
     statistic = all_continuous() ~ c("{mean} ({sd})"),
@@ -339,7 +342,7 @@ plot_full_graph <- function(graphs, layout, group, weight, centrality, weight_la
 
 ```{r}
 plot_d_pop_grav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = d_pop_grav, 
   centrality = d_pop_grav_close,
   weight_label = "Gravity model with distance and population",
@@ -354,24 +357,24 @@ ggsave(
 ```
 
 ```{r}
-plot_d_pop_mgrav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = d_pop_mgrav, 
-  centrality = d_pop_mgrav_close,
-  weight_label = "Mod. gravity model with distance and population",
-  centrality_label = "Closeness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/d_pop_mgrav_close.png", plot = plot_d_pop_mgrav_close, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_d_pop_mgrav_close <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout_kk,  
+#   weight = d_pop_mgrav, 
+#   centrality = d_pop_mgrav_close,
+#   weight_label = "Mod. gravity model with distance and population",
+#   centrality_label = "Closeness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/d_pop_mgrav_close.png", plot = plot_d_pop_mgrav_close, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_d_pop_grav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = d_pop_grav, 
   centrality = d_pop_grav_between,
   weight_label = "Gravity model with distance and population",
@@ -386,24 +389,24 @@ ggsave(
 ```
 
 ```{r}
-plot_d_pop_mgrav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = d_pop_mgrav, 
-  centrality = d_pop_mgrav_between,
-  weight_label = "Mod. gravity model with distance and population",
-  centrality_label = "Betweenness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/d_pop_mgrav_between.png", plot = plot_d_pop_mgrav_between, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_d_pop_mgrav_between <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = d_pop_mgrav, 
+#   centrality = d_pop_mgrav_between,
+#   weight_label = "Mod. gravity model with distance and population",
+#   centrality_label = "Betweenness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/d_pop_mgrav_between.png", plot = plot_d_pop_mgrav_between, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_d_adef_grav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = d_adef_grav, 
   centrality = d_adef_grav_close,
   weight_label = "Gravity model with distance and forest loss",
@@ -418,24 +421,24 @@ ggsave(
 ```
 
 ```{r}
-plot_d_adef_mgrav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = d_adef_mgrav, 
-  centrality = d_adef_mgrav_close,
-  weight_label = "Mod. gravity model with distance and forest loss",
-  centrality_label = "Closeness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/d_adef_mgrav_close.png", plot = plot_d_adef_mgrav_close, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_d_adef_mgrav_close <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = d_adef_mgrav, 
+#   centrality = d_adef_mgrav_close,
+#   weight_label = "Mod. gravity model with distance and forest loss",
+#   centrality_label = "Closeness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/d_adef_mgrav_close.png", plot = plot_d_adef_mgrav_close, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_d_adef_grav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = d_adef_grav, 
   centrality = d_adef_grav_between,
   weight_label = "Gravity model with distance and forest loss",
@@ -450,26 +453,26 @@ ggsave(
 ```
 
 ```{r}
-plot_d_adef_mgrav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = d_adef_mgrav, 
-  centrality = d_adef_mgrav_between,
-  weight_label = "Mod. gravity model with distance and forest loss",
-  centrality_label = "Betweenness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/d_adef_mgrav_between.png", plot = plot_d_adef_mgrav_between, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_d_adef_mgrav_between <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = d_adef_mgrav, 
+#   centrality = d_adef_mgrav_between,
+#   weight_label = "Mod. gravity model with distance and forest loss",
+#   centrality_label = "Betweenness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/d_adef_mgrav_between.png", plot = plot_d_adef_mgrav_between, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ## Travel time
 
 ```{r}
 plot_t_pop_grav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = t_pop_grav, 
   centrality = t_pop_grav_close,
   weight_label = "Gravity model with travel time and population",
@@ -484,24 +487,24 @@ ggsave(
 ```
 
 ```{r}
-plot_t_pop_mgrav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = t_pop_mgrav, 
-  centrality = t_pop_mgrav_close,
-  weight_label = "Mod. gravity model with travel time and population",
-  centrality_label = "Closeness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/t_pop_mgrav_close.png", plot = plot_t_pop_mgrav_close, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_t_pop_mgrav_close <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = t_pop_mgrav, 
+#   centrality = t_pop_mgrav_close,
+#   weight_label = "Mod. gravity model with travel time and population",
+#   centrality_label = "Closeness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/t_pop_mgrav_close.png", plot = plot_t_pop_mgrav_close, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_t_pop_grav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = t_pop_grav, 
   centrality = t_pop_grav_between,
   weight_label = "Gravity model with travel time and population",
@@ -516,24 +519,24 @@ ggsave(
 ```
 
 ```{r}
-plot_t_pop_mgrav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = t_pop_mgrav, 
-  centrality = t_pop_mgrav_between,
-  weight_label = "Mod. gravity model with travel time and population",
-  centrality_label = "Betweenness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/t_pop_mgrav_between.png", plot = plot_t_pop_mgrav_between, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_t_pop_mgrav_between <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = t_pop_mgrav, 
+#   centrality = t_pop_mgrav_between,
+#   weight_label = "Mod. gravity model with travel time and population",
+#   centrality_label = "Betweenness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/t_pop_mgrav_between.png", plot = plot_t_pop_mgrav_between, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_t_adef_grav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = t_adef_grav, 
   centrality = t_adef_grav_close,
   weight_label = "Gravity model with travel time and forest loss",
@@ -548,24 +551,24 @@ ggsave(
 ```
 
 ```{r}
-plot_t_adef_mgrav_close <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = t_adef_mgrav, 
-  centrality = t_adef_mgrav_close,
-  weight_label = "Mod. gravity model with travel time and forest loss",
-  centrality_label = "Closeness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/t_adef_mgrav_close.png", plot = plot_t_adef_mgrav_close, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_t_adef_mgrav_close <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = t_adef_mgrav, 
+#   centrality = t_adef_mgrav_close,
+#   weight_label = "Mod. gravity model with travel time and forest loss",
+#   centrality_label = "Closeness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/t_adef_mgrav_close.png", plot = plot_t_adef_mgrav_close, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r}
 plot_t_adef_grav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
+  graphs = graphs, layout = graph_layout_kk,  
   weight = t_adef_grav, 
   centrality = t_adef_grav_between,
   weight_label = "Gravity model with travel time and forest loss",
@@ -580,19 +583,19 @@ ggsave(
 ```
 
 ```{r}
-plot_t_adef_mgrav_between <- plot_full_graph(
-  graphs = graphs, layout = graph_layout,  
-  weight = t_adef_mgrav, 
-  centrality = t_adef_mgrav_between,
-  weight_label = "Mod. gravity model with travel time and forest loss",
-  centrality_label = "Betweenness centrality score",
-  group = hydro_name_ana
-)
-
-ggsave(
-  "figs/full-graph/t_adef_mgrav_between.png", plot = plot_t_adef_mgrav_between, 
-  height = 10, width = 9.5, units = "in"
-)
+# plot_t_adef_mgrav_between <- plot_full_graph(
+#   graphs = graphs, layout = graph_layout,  
+#   weight = t_adef_mgrav, 
+#   centrality = t_adef_mgrav_between,
+#   weight_label = "Mod. gravity model with travel time and forest loss",
+#   centrality_label = "Betweenness centrality score",
+#   group = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/full-graph/t_adef_mgrav_between.png", plot = plot_t_adef_mgrav_between, 
+#   height = 10, width = 9.5, units = "in"
+# )
 ```
 
 ```{r warning=FALSE, fig.height=6.8, fig.width=9.5}
@@ -670,18 +673,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_pop_mgrav_close <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
-  centrality = d_pop_mgrav_close, 
-  weight_label = "Mod. gravity model weight with distance and population",
-  centrality_label = "Closeness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/d_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_pop_mgrav_close <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
+#   centrality = d_pop_mgrav_close, 
+#   weight_label = "Mod. gravity model weight with distance and population",
+#   centrality_label = "Closeness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/d_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -700,18 +703,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_pop_mgrav_between <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
-  centrality = d_pop_mgrav_between, 
-  weight_label = "Mod. gravity model weight with distance and population",
-  centrality_label = "Betweenness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/d_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_pop_mgrav_between <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = d_pop_mgrav, 
+#   centrality = d_pop_mgrav_between, 
+#   weight_label = "Mod. gravity model weight with distance and population",
+#   centrality_label = "Betweenness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/d_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -730,18 +733,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_adef_mgrav_close <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
-  centrality = d_adef_mgrav_close, 
-  weight_label = "Mod. gravity model weight with distance and forest loss",
-  centrality_label = "Closeness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/d_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_adef_mgrav_close <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
+#   centrality = d_adef_mgrav_close, 
+#   weight_label = "Mod. gravity model weight with distance and forest loss",
+#   centrality_label = "Closeness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/d_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -760,18 +763,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_adef_mgrav_between <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
-  centrality = d_adef_mgrav_between, 
-  weight_label = "Mod. gravity model weight with distance and forest loss",
-  centrality_label = "Betweenness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/d_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_adef_mgrav_between <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = d_adef_mgrav, 
+#   centrality = d_adef_mgrav_between, 
+#   weight_label = "Mod. gravity model weight with distance and forest loss",
+#   centrality_label = "Betweenness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/d_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ## Facet time
@@ -792,18 +795,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_pop_mgrav_close <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
-  centrality = t_pop_mgrav_close, 
-  weight_label = "Mod. gravity model weight with distance and population",
-  centrality_label = "Closeness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/t_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_pop_mgrav_close <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
+#   centrality = t_pop_mgrav_close, 
+#   weight_label = "Mod. gravity model weight with distance and population",
+#   centrality_label = "Closeness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/t_pop_mgrav_close.png", plot = plot_facet_pop_mgrav_close, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -822,18 +825,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_pop_mgrav_between <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
-  centrality = t_pop_mgrav_between, 
-  weight_label = "Mod. gravity model weight with distance and population",
-  centrality_label = "Betweenness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/t_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_pop_mgrav_between <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = t_pop_mgrav, 
+#   centrality = t_pop_mgrav_between, 
+#   weight_label = "Mod. gravity model weight with distance and population",
+#   centrality_label = "Betweenness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/t_pop_mgrav_between.png", plot = plot_facet_pop_mgrav_between, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -852,18 +855,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_adef_mgrav_close <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
-  centrality = t_adef_mgrav_close, 
-  weight_label = "Mod. gravity model weight with distance and forest loss",
-  centrality_label = "Closeness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/t_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_adef_mgrav_close <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
+#   centrality = t_adef_mgrav_close, 
+#   weight_label = "Mod. gravity model weight with distance and forest loss",
+#   centrality_label = "Closeness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/t_adef_mgrav_close.png", plot = plot_facet_adef_mgrav_close, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r}
@@ -882,18 +885,18 @@ ggsave(
 ```
 
 ```{r}
-plot_facet_adef_mgrav_between <- plot_facet_graph(
-  graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
-  centrality = t_adef_mgrav_between, 
-  weight_label = "Mod. gravity model weight with distance and forest loss",
-  centrality_label = "Betweenness centrality",
-  facet = hydro_name_ana
-)
-
-ggsave(
-  "figs/facet-graph/t_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
-  height = 20, width = 14, units = "in"
-)
+# plot_facet_adef_mgrav_between <- plot_facet_graph(
+#   graphs = graphs, layout = graph_layout_stress, weight = t_adef_mgrav, 
+#   centrality = t_adef_mgrav_between, 
+#   weight_label = "Mod. gravity model weight with distance and forest loss",
+#   centrality_label = "Betweenness centrality",
+#   facet = hydro_name_ana
+# )
+# 
+# ggsave(
+#   "figs/facet-graph/t_adef_mgrav_between.png", plot = plot_facet_adef_mgrav_between, 
+#   height = 20, width = 14, units = "in"
+# )
 ```
 
 ```{r fig.height=20, fig.width=14}
