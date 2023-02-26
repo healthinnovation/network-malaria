@@ -79,6 +79,42 @@ air_malaria_long <- air_malaria %>%
 ```
 
 ```{r}
+# Grid data (csv) for Geo Grid Designer
+# code,name,row,col
+# Cuenca Putumayo,C Putumayo,1,6
+# Cuenca Tigre,C Tigre,2,5
+# Cuenca Napo,C Napo,2,6
+# Intercuenca 49793,IC 49793,2,7
+# Cuenca Morona,C Morona,3,4
+# Cuenca Itaya,C Itaya,3,5
+# Cuenca Nanay,C Nanay,3,6
+# Intercuenca 4977,IC 4977,3,8
+# Intercuenca 49795,IC 49795,3,7
+# Intercuenca Medio Marañón,IC Medio Marañón,4,3
+# Cuenca Pastaza,C Pastaza,4,4
+# Intercuenca 49799,IC 49799,4,6
+# Intercuenca 49791,IC 49791,4,9
+# Intercuenca 49797,IC 49797,4,8
+# Cuenca Tahuayo,C Tahuayo,4,7
+# Intercuenca Bajo Marañón,IC Bajo Marañón,4,5
+# Intercuenca 49873,IC 49873,5,3
+# Intercuenca Medio Bajo Marañón,IC Medio Bajo Marañón,5,4
+# Cuenca Manití,C Manití,5,8
+# Intercuenca 49911,IC 49911,5,7
+# Cuenca Tapiche,C Tapiche,5,6
+# Intercuenca Medio Bajo Huallaga,IC Medio Bajo Huallaga,5,5
+# Intercuenca 49871,IC 49871,5,2
+# Intercuenca Bajo Huallaga,IC Bajo Huallaga,6,3
+# Cuenca Carhuapanas,C Carhuapanas,6,4
+# Cuenca Yavari,C Yavari,6,7
+# Intercuenca 49913,IC 49913,6,6
+# Intercuenca 49915,IC 49915,6,5
+# Intercuenca 49877,IC 49877,6,2
+# Cuenca Potro,C Potro,7,3
+# Cuenca Paranapura,C Paranapura,7,4
+```
+
+```{r}
 hydro_grid <- data.frame(
   code = c("Cuenca Putumayo", "Cuenca Tigre", "Cuenca Napo", "Intercuenca 49793", "Cuenca Morona", "Cuenca Itaya", "Cuenca Nanay", "Intercuenca 4977", "Intercuenca 49795", "Intercuenca Medio Marañón", "Cuenca Pastaza", "Intercuenca 49799", "Intercuenca 49791", "Intercuenca 49797", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca 49873", "Intercuenca Medio Bajo Marañón", "Cuenca Manití", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Intercuenca 49871", "Intercuenca Bajo Huallaga", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49913", "Intercuenca 49915", "Intercuenca 49877", "Cuenca Potro", "Cuenca Paranapura"),
   name = c("C Putumayo", "C Tigre", "C Napo", "IC 49793", "C Morona", "C Itaya", "C Nanay", "IC 4977", "IC 49795", "IC Medio Marañón", "C Pastaza", "IC 49799", "IC 49791", "IC 49797", "C Tahuayo", "IC Bajo Marañón", "IC 49873", "IC Medio Bajo Marañón", "C Manití", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "IC 49871", "IC Bajo Huallaga", "C Carhuapanas", "C Yavari", "IC 49913", "IC 49915", "IC 49877", "C Potro", "C Paranapura"),
