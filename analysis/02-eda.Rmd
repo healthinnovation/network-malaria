@@ -162,7 +162,7 @@ plot_air_hydro
 ```{r}
 ggsave(
   "figs/air-hydro-facet.png", plot = plot_air_hydro, 
-  height = 15, width = 23, units = "in"
+  height = 15, width = 24, units = "in"
 )
 ```
 
