@@ -64,7 +64,8 @@ air_malaria_long <- air_malaria %>%
       specie, levels = c("vivax", "falciparum"), 
       labels = c("P. vivax", "P. falciparum")
     )
-  )
+  ) %>% 
+  filter(between(year, 2011, 2018))
 ```
 
 
@@ -115,11 +116,21 @@ air_malaria_long <- air_malaria %>%
 ```
 
 ```{r}
+# hydro_grid <- data.frame(
+#   code = c("Cuenca Putumayo", "Cuenca Tigre", "Cuenca Napo", "Intercuenca 49793", "Cuenca Morona", "Cuenca Itaya", "Cuenca Nanay", "Intercuenca 4977", "Intercuenca 49795", "Intercuenca Medio Marañón", "Cuenca Pastaza", "Intercuenca 49799", "Intercuenca 49791", "Intercuenca 49797", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca 49873", "Intercuenca Medio Bajo Marañón", "Cuenca Manití", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Intercuenca 49871", "Intercuenca Bajo Huallaga", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49913", "Intercuenca 49915", "Intercuenca 49877", "Cuenca Potro", "Cuenca Paranapura"),
+#   name = c("C Putumayo", "C Tigre", "C Napo", "IC 49793", "C Morona", "C Itaya", "C Nanay", "IC 4977", "IC 49795", "IC Medio Marañón", "C Pastaza", "IC 49799", "IC 49791", "IC 49797", "C Tahuayo", "IC Bajo Marañón", "IC 49873", "IC Medio Bajo Marañón", "C Manití", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "IC 49871", "IC Bajo Huallaga", "C Carhuapanas", "C Yavari", "IC 49913", "IC 49915", "IC 49877", "C Potro", "C Paranapura"),
+#   row = c(1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7),
+#   col = c(6, 5, 6, 7, 4, 5, 6, 8, 7, 3, 4, 6, 9, 8, 7, 5, 3, 4, 8, 7, 6, 5, 2, 3, 4, 7, 6, 5, 2, 3, 4),
+#   stringsAsFactors = FALSE
+# )
+```
+
+```{r}
 hydro_grid <- data.frame(
-  code = c("Cuenca Putumayo", "Cuenca Tigre", "Cuenca Napo", "Intercuenca 49793", "Cuenca Morona", "Cuenca Itaya", "Cuenca Nanay", "Intercuenca 4977", "Intercuenca 49795", "Intercuenca Medio Marañón", "Cuenca Pastaza", "Intercuenca 49799", "Intercuenca 49791", "Intercuenca 49797", "Cuenca Tahuayo", "Intercuenca Bajo Marañón", "Intercuenca 49873", "Intercuenca Medio Bajo Marañón", "Cuenca Manití", "Intercuenca 49911", "Cuenca Tapiche", "Intercuenca Medio Bajo Huallaga", "Intercuenca 49871", "Intercuenca Bajo Huallaga", "Cuenca Carhuapanas", "Cuenca Yavari", "Intercuenca 49913", "Intercuenca 49915", "Intercuenca 49877", "Cuenca Potro", "Cuenca Paranapura"),
-  name = c("C Putumayo", "C Tigre", "C Napo", "IC 49793", "C Morona", "C Itaya", "C Nanay", "IC 4977", "IC 49795", "IC Medio Marañón", "C Pastaza", "IC 49799", "IC 49791", "IC 49797", "C Tahuayo", "IC Bajo Marañón", "IC 49873", "IC Medio Bajo Marañón", "C Manití", "IC 49911", "C Tapiche", "IC Medio Bajo Huallaga", "IC 49871", "IC Bajo Huallaga", "C Carhuapanas", "C Yavari", "IC 49913", "IC 49915", "IC 49877", "C Potro", "C Paranapura"),
-  row = c(1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 7, 7),
-  col = c(6, 5, 6, 7, 4, 5, 6, 8, 7, 3, 4, 6, 9, 8, 7, 5, 3, 4, 8, 7, 6, 5, 2, 3, 4, 7, 6, 5, 2, 3, 4),
+  code = c("Cuenca Putumayo", "Cuenca Itaya", "Cuenca Napo", "Cuenca Tigre", "Cuenca Morona", "Intercuenca 49799", "Cuenca Nanay", "Intercuenca 49793", "Cuenca Pastaza", "Intercuenca Medio Marañón", "Intercuenca 49873", "Intercuenca 49877", "Cuenca Tahuayo", "Intercuenca 49795", "Intercuenca 49791", "Intercuenca 4977", "Intercuenca Medio Bajo Marañón", "Intercuenca Bajo Huallaga", "Intercuenca 49871", "Intercuenca 49911", "Cuenca Yavari", "Cuenca Manití", "Intercuenca Bajo Marañón", "Intercuenca Medio Bajo Huallaga", "Cuenca Carhuapanas", "Cuenca Potro", "Intercuenca 49797", "Cuenca Tapiche", "Intercuenca 49913", "Cuenca Paranapura", "Intercuenca 49915"),
+  name = c("C Putumayo", "C Itaya", "C Napo", "C Tigre", "C Morona", "IC 49799", "C Nanay", "IC 49793", "C Pastaza", "IC Medio Marañón", "IC 49873", "IC 49877", "C Tahuayo", "IC 49795", "IC 49791", "IC 4977", "IC Medio Bajo Marañón", "IC Bajo Huallaga", "IC 49871", "IC 49911", "C Yavari", "C Manití", "IC Bajo Marañón", "IC Medio Bajo Huallaga", "C Carhuapanas", "C Potro", "IC 49797", "C Tapiche", "IC 49913", "C Paranapura", "IC 49915"),
+  row = c(1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 4, 6, 6, 6, 6, 7),
+  col = c(5, 5, 6, 4, 3, 5, 6, 7, 4, 3, 2, 1, 5, 6, 7, 8, 4, 3, 2, 5, 6, 7, 4, 3, 2, 1, 5, 4, 3, 2, 3),
   stringsAsFactors = FALSE
 )
 ```
