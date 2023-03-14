@@ -7,18 +7,6 @@ library(tidyr)
 library(tidygraph)
 library(scales)
 
-processed_path <- path("analysis/data/processed/")
-nodes_full_file <- "nodes-full.csv"
-nodes_full_path <- path(processed_path, nodes_full_file)
-nodes_full_raw <- read_csv(nodes_full_path)
-
-nodes_full <- nodes_full_raw %>%
-  mutate(adef = rowMeans(across(starts_with("adef"))))
-
-nodes_raw <- nodes_full %>%
-  select(village_id, population, adef) %>%
-  filter(population > 0, adef > 0)
-
 raw_path <- path("analysis/data/raw/")
 od_travel_time_filename <- "od-travel-time-original.csv"
 od_travel_time_path <- path(raw_path, od_travel_time_filename)
@@ -35,8 +23,6 @@ od_distance_raw <- read_csv(
   od_distance_path, col_names = c("fromid", "toid", "distance"),
   col_types = "ccd", skip = 1
 )
-
-# Edges -------------------------------------------------------------------
 
 od_travel_time <- od_travel_time_raw %>%
   filter(fromid != toid, time > 0) %>%
@@ -57,21 +43,26 @@ od_distance <- od_distance_raw %>%
 edges_clean <- od_distance %>%
   inner_join(od_travel_time, by = c("from", "to"))
 
-# Nodes -------------------------------------------------------------------
-
 edges_village_ids <- unique(c(edges_clean$from, edges_clean$to))
 
-villages_coord_raw <- st_read("analysis/data/raw/villages-original.gpkg")
+processed_path <- path("analysis/data/processed/")
+nodes_full_file <- "nodes-full.csv"
+nodes_full_path <- path(processed_path, nodes_full_file)
+nodes_full_raw <- read_csv(nodes_full_path)
 
+villages_coord_raw <- st_read("analysis/data/raw/villages-original.gpkg")
 villages_coord <- villages_coord_raw %>%
   mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
   st_drop_geometry() %>%
   select(village_id = id_loc, lon, lat)
 
-nodes_clean <- nodes_full %>%
+nodes_clean <- nodes_full_raw %>%
+  mutate(adef = rowMeans(across(starts_with("adef")))) %>%
   select(province:hydro_name_l7, adef) %>%
-  filter(village_id %in% edges_village_ids) %>%
+  filter(village_id %in% edges_village_ids, population > 0, adef > 0) %>%
   left_join(villages_coord, by = "village_id")
+
+nodes_pop_adef <- select(nodes_clean, village_id, population, adef)
 
 networks_raw <- nodes_clean %>%
   nest(nodes = -hydro_name_ana) %>%
@@ -88,34 +79,16 @@ edges <- networks %>%
   select(hydro_name_ana, edges) %>%
   unnest(edges) %>%
   select(from, to, everything()) %>%
-  inner_join(nodes_raw, by = c("from" = "village_id")) %>%
+  inner_join(nodes_pop_adef, by = c("from" = "village_id")) %>%
   inner_join(
-    nodes_raw, by = c("to" = "village_id"),
+    nodes_pop_adef, by = c("to" = "village_id"),
     suffix = c("_from", "_to")
   ) %>%
   mutate(
-    d_inv = 1 / distance,
     d_pop_grav = (population_from * population_to) / distance,
-    d_pop_mgrav_from = distance * (population_from / population_to),
-    d_pop_mgrav_to = distance * (population_to / population_from),
-    max_population = pmax(population_from, population_to),
-    min_population = pmin(population_from, population_to),
-    d_pop_mgrav = distance * (max_population / min_population),
     d_adef_grav = (adef_from * adef_to) / distance,
-    d_adef_mgrav_from = distance * (adef_from / adef_to),
-    d_adef_mgrav_to = distance * (adef_to / adef_from),
-    max_adef = pmax(adef_from, adef_to),
-    min_adef = pmin(adef_from, adef_to),
-    d_adef_mgrav = distance * (max_adef / min_adef),
-    t_inv = 1 / time,
     t_pop_grav = (population_from * population_to) / time,
-    t_pop_mgrav_from = time * (population_from / population_to),
-    t_pop_mgrav_to = time * (population_to / population_from),
-    t_pop_mgrav = time * (max_population / min_population),
-    t_adef_grav = (adef_from * adef_to) / time,
-    t_adef_mgrav_from = time * (adef_from / adef_to),
-    t_adef_mgrav_to = time * (adef_to / adef_from),
-    t_adef_mgrav = time * (max_adef / min_adef)
+    t_adef_grav = (adef_from * adef_to) / time
   ) %>%
   select(
     -c(
