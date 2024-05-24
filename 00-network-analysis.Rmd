@@ -233,6 +233,160 @@ layout_kk = create_layout(graphs, layout = "kk")
 ```
 
 ```{r}
+nodes_layout_kk = igraph::layout_with_kk(
+  graphs, dim = 3
+)
+
+# layout_3d = igraph::layout_with_fr(
+#   graphs, dim = 3, minx = rep(-30, nrow(nodes)), maxx = rep(30, nrow(nodes)), 
+#   miny = rep(-30, nrow(nodes)), maxy = rep(30, nrow(nodes)), 
+#   minz = rep(-30, nrow(nodes)), maxz = rep(30, nrow(nodes))
+# )
+
+nodes_layout_drl = igraph::layout_with_drl(
+  graphs, dim = 3
+)
+
+# layout_3d = graphlayouts::layout_with_stress3D(
+#   graphs
+# )
+
+colnames(nodes_layout_kk) = c("x", "y", "z")
+colnames(nodes_layout_drl) = c("x", "y", "z")
+
+nodes_layout_kk_attr = bind_cols(data.frame(nodes_layout_kk), village_centralities)
+nodes_layout_drl_attr = bind_cols(data.frame(nodes_layout_drl), village_centralities)
+```
+
+```{r}
+edges_layout_kk_x = rep(0, nrow(edges) * 3)
+edges_layout_kk_y = rep(0, nrow(edges) * 3)
+edges_layout_kk_z = rep(0, nrow(edges) * 3)
+
+edges_layout_id = rep(0, nrow(edges) * 3)
+
+edges_layout_drl_x = rep(0, nrow(edges) * 3)
+edges_layout_drl_y = rep(0, nrow(edges) * 3)
+edges_layout_drl_z = rep(0, nrow(edges) * 3)
+
+for (row in 1:nrow(edges)) {
+  from = edges$from[row]
+  to = edges$to[row]
+  x_from = nodes_layout_kk_attr$x[nodes_layout_kk_attr$village_id == from]
+  x_to = nodes_layout_kk_attr$x[nodes_layout_kk_attr$village_id == to]
+  y_from = nodes_layout_kk_attr$y[nodes_layout_kk_attr$village_id == from]
+  y_to = nodes_layout_kk_attr$y[nodes_layout_kk_attr$village_id == to]
+  z_from = nodes_layout_kk_attr$z[nodes_layout_kk_attr$village_id == from]
+  z_to = nodes_layout_kk_attr$z[nodes_layout_kk_attr$village_id == to]
+  edges_layout_kk_x[((row*3)-2):(row*3)] = c(x_from, x_to, NA)
+  edges_layout_kk_y[((row*3)-2):(row*3)] = c(y_from, y_to, NA)
+  edges_layout_kk_z[((row*3)-2):(row*3)] = c(z_from, z_to, NA)
+  edges_layout_id[((row*3)-2):(row*3)] = c(from, to, NA)
+}
+
+for (row in 1:nrow(edges)) {
+  from = edges$from[row]
+  to = edges$to[row]
+  x_from = nodes_layout_drl_attr$x[nodes_layout_drl_attr$village_id == from]
+  x_to = nodes_layout_drl_attr$x[nodes_layout_drl_attr$village_id == to]
+  y_from = nodes_layout_drl_attr$y[nodes_layout_drl_attr$village_id == from]
+  y_to = nodes_layout_drl_attr$y[nodes_layout_drl_attr$village_id == to]
+  z_from = nodes_layout_drl_attr$z[nodes_layout_drl_attr$village_id == from]
+  z_to = nodes_layout_drl_attr$z[nodes_layout_kk_attr$village_id == to]
+  edges_layout_drl_x[((row*3)-2):(row*3)] = c(x_from, x_to, NA)
+  edges_layout_drl_y[((row*3)-2):(row*3)] = c(y_from, y_to, NA)
+  edges_layout_drl_z[((row*3)-2):(row*3)] = c(z_from, z_to, NA)
+}
+
+edges_layout_kk = tibble(
+  x = edges_layout_kk_x, y = edges_layout_kk_y, z = edges_layout_kk_z,
+  `village_id` = edges_layout_id
+)
+
+edges_layout_drl = tibble(
+  x = edges_layout_drl_x, y = edges_layout_drl_y, z = edges_layout_drl_z,
+  `village_id` = edges_layout_id
+)
+
+edges_layout_kk_attr = edges_layout_kk %>% 
+  left_join(nodes, by = "village_id")
+edges_layout_drl_attr = edges_layout_drl %>% 
+  left_join(nodes, by = "village_id")
+```
+
+```{r}
+library(plotly)
+
+fig = plot_ly()
+
+fig_edges_kk = fig %>%
+  add_trace(
+    data = edges_layout_kk_attr, x = ~x, y = ~y, z = ~z, type = "scatter3d", 
+    mode = "lines", color = ~watershed, showlegend = FALSE,
+    line = list(width = 0.5, opacity = 0.5), opacity = 0.5, hoverinfo = "none"
+  )
+
+fig_network_kk = fig_edges_kk %>%
+  add_trace(
+  data = nodes_layout_kk_attr, type = "scatter3d", mode = "markers", x = ~x, 
+  y = ~y, z = ~z, size = ~population, color = ~watershed,
+  marker = list(symbol = "circle", sizemode = "diameter", opacity = 1), 
+  sizes = c(5, 20), 
+  opacity = 1, showlegend = FALSE, hoverinfo = "text", 
+  text = ~paste(
+    "Watershed:", watershed, "<br>Village:", village, "<br>Population:", population
+  )
+  )
+
+axis = list(
+  showbackground = FALSE, showline = FALSE, zeroline = FALSE, showgrid = FALSE,
+  showticklabels = FALSE, title = ""
+)
+
+fig_3d_network_kk = fig_network_kk %>% 
+  layout(
+    title = "", scene = list(xaxis = axis, yaxis = axis, zaxis = axis),
+    margin = list(b = 40, l = 40, r = 40, t = 40)
+  )
+
+htmlwidgets::saveWidget(
+  fig_3d_network_kk, file = "figures/3d-network-kk.html", selfcontained = TRUE
+)
+```
+
+```{r}
+fig_edges_drl = fig %>%
+  add_trace(
+    data = edges_layout_drl_attr, x = ~x, y = ~y, z = ~z, type = "scatter3d", 
+    mode = "lines", color = ~watershed, showlegend = FALSE,
+    line = list(width = 0.5, opacity = 0.5), opacity = 0.5, hoverinfo = "none"
+  )
+
+fig_network_drl = fig_edges_drl %>%
+  add_trace(
+  data = nodes_layout_drl_attr, type = "scatter3d", mode = "markers", x = ~x, 
+  y = ~y, z = ~z, size = ~population, color = ~watershed,
+  marker = list(symbol = "circle", sizemode = "diameter", opacity = 1), 
+  sizes = c(5, 20), 
+  opacity = 1, showlegend = FALSE, hoverinfo = "text", 
+  text = ~paste(
+    "Watershed:", watershed, "<br>Village:", village, "<br>Population:", population
+  )
+  )
+
+fig_3d_network_drl = fig_network_drl %>% 
+  layout(
+    title = "", scene = list(xaxis = axis, yaxis = axis, zaxis = axis),
+    margin = list(b = 40, l = 40, r = 40, t = 40)
+  )
+
+htmlwidgets::saveWidget(
+  fig_3d_network_drl, file = "figures/3d-network-drl.html", selfcontained = TRUE
+)
+```
+
+
+```{r}
 plot_full_graph = function(graphs, layout, group, weight, centrality, weight_label, centrality_label) {
   plt = graphs |> 
     ggraph(layout = "kk") +
