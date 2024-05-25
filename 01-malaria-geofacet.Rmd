@@ -1,6 +1,6 @@
 ---
-title: "Exploratory data analysis"
-author: "Diego Villa"
+title: "Geofacet"
+author: "Villa-Almeyda, Diego"
 date: "`r Sys.Date()`"
 output: html_document
 ---

@@ -1,6 +1,6 @@
 ---
 title: "Network analysis"
-author: "Diego Villa"
+author: "Villa-Almeyda, Diego"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -15,35 +15,35 @@ library(gtsummary)
 # Data reading
 
 ```{r}
-processed_path = "data/processed/"
+processed_path <- "data/processed/"
 ```
 
 ```{r}
-nodes_path = fs::path(processed_path, "00-nodes.csv")
-nodes = readr::read_csv(nodes_path, col_types = "ccccdcd")
+nodes_path <- fs::path(processed_path, "00-nodes.csv")
+nodes <- readr::read_csv(nodes_path, col_types = "ccccdcd")
 glimpse(nodes)
 ```
 
 ```{r}
-edges_path = fs::path(processed_path, "01-edges.csv")
-edges = readr::read_csv(edges_path, col_types = "cccd")
+edges_path <- fs::path(processed_path, "01-edges.csv")
+edges <- readr::read_csv(edges_path, col_types = "cccd")
 glimpse(edges)
 ```
 
 ```{r}
-nodes_watershed = nodes |> 
+nodes_watershed <- nodes |> 
   mutate(watershed_ana = watershed) |> 
   tidyr::nest(nodes = -watershed_ana) 
 ```
 
 ```{r}
-edges_watershed = edges |> 
+edges_watershed <- edges |> 
   mutate(watershed_ana = watershed) |> 
   tidyr::nest(edges = -watershed_ana) 
 ```
 
 ```{r}
-networks = nodes_watershed |>  
+networks <- nodes_watershed |>  
   inner_join(edges_watershed, by = "watershed_ana") |> 
   mutate(
     networks = purrr::map2(
@@ -64,65 +64,32 @@ networks = nodes_watershed |>
 Strength and eigenvector centrality measures interpret weights as connection strength (higher weights, more connected), whereas closeness and betweenness centrality measures interpret weights as distances (higher weights, less connected).
 
 ```{r}
-get_centralities = function(graph) {
-  graph_centralities = graph |> 
-    activate(nodes) |>
-    mutate(
-      dist_stre = centrality_degree(weights = 1/distance),
-      dist_pop_gravity_stre = centrality_degree(weights = dist_pop_gravity),
-      dist_forest_gravity_stre = centrality_degree(weights = dist_forest_gravity),
-      time_stre = centrality_degree(weights = 1/time),
-      time_pop_gravity_stre = centrality_degree(weights = time_pop_gravity),
-      time_forest_gravity_stre = centrality_degree(weights = time_forest_gravity),
-      dist_close = centrality_closeness(weights = distance),
-      dist_pop_gravity_close = centrality_closeness(weights = 1/dist_pop_gravity),
-      dist_forest_gravity_close = centrality_closeness(weights = 1/dist_forest_gravity),
-      time_close = centrality_closeness(weights = time),
-      time_pop_gravity_close = centrality_closeness(weights = 1/time_pop_gravity),
-      time_forest_gravity_close = centrality_closeness(weights = 1/time_forest_gravity),
-      dist_between = centrality_betweenness(weights = distance),
-      dist_pop_gravity_between = centrality_betweenness(weights = 1/dist_pop_gravity),
-      dist_forest_gravity_between = centrality_betweenness(weights = 1/dist_forest_gravity),
-      time_between = centrality_betweenness(weights = time),
-      time_pop_gravity_between = centrality_betweenness(weights = 1/time_pop_gravity),
-      time_forest_gravity_between = centrality_betweenness(weights = 1/time_forest_gravity),
-      dist_eigen = centrality_eigen(weights = 1/distance),
-      dist_pop_gravity_eigen = centrality_eigen(weights = dist_pop_gravity),
-      dist_forest_gravity_eigen = centrality_eigen(weights = dist_forest_gravity),
-      time_eigen = centrality_eigen(weights = 1/time),
-      time_pop_gravity_eigen = centrality_eigen(weights = time_pop_gravity),
-      time_forest_gravity_eigen = centrality_eigen(weights = time_forest_gravity)
-    ) |> 
-    mutate(
-      across(dist_stre:time_forest_gravity_eigen, scales::rescale)
-    )
-  graph_centralities
-}
+source("R/get_centralities.R")
 ```
 
 ```{r warning=FALSE}
-centralities = networks |> 
+centralities <- networks |> 
   mutate(centralities = purrr::map(networks, get_centralities))
 ```
 
 ```{r}
-village_centralities = centralities |> 
+village_centralities <- centralities |> 
   mutate(
-    centrality_tables = purrr::map(centralities, ~ as_tibble(activate(.x, nodes)))
+    centrality_tables = purrr::map(centralities, \(x) as_tibble(activate(x, nodes)))
   ) |> 
   select(centrality_tables) |> 
   tidyr::unnest(centrality_tables)
 ```
 
 ```{r include=FALSE}
-centralities_filepath = fs::path(processed_path, "02-village-centralities.csv")
+centralities_filepath <- fs::path(processed_path, "02-village-centralities.csv")
 readr::write_csv(village_centralities, centralities_filepath, na = "")
 ```
 
 # Summary tables
 
 ```{r}
-centrality_labels = list(
+centrality_labels <- list(
   dist_stre = "Strength D",
   dist_pop_gravity_stre = "Strength GM-PD",
   dist_forest_gravity_stre = "Strength GM-FD",
@@ -151,7 +118,7 @@ centrality_labels = list(
 ```
 
 ```{r}
-centralities_summary = village_centralities |> 
+centralities_summary <- village_centralities |> 
   select(watershed, dist_stre:time_forest_gravity_eigen) |> 
   tbl_summary(
     by = watershed,
@@ -169,12 +136,12 @@ centralities_summary = village_centralities |>
 ```
 
 ```{r}
-centralities_summary_path = fs::path("tables/centralities-summary.csv")
+centralities_summary_path <- fs::path("tables/centralities-summary.csv")
 readr::write_csv(centralities_summary, centralities_summary_path)
 ```
 
 ```{r}
-weight_labels = list(
+weight_labels <- list(
   distance = "Distance (D)",
   dist_pop_gravity = "Gravity model: Population and distance (GM-PD)",
   dist_forest_gravity = "Gravity model: Forest loss and distance (GM-FD)",
@@ -185,7 +152,7 @@ weight_labels = list(
 ```
 
 ```{r}
-weights_summary = edges |> 
+weights_summary <- edges |> 
   select(
     watershed, distance:dist_forest_gravity, time, 
     time_pop_gravity:time_forest_gravity
@@ -206,34 +173,836 @@ weights_summary = edges |>
 ```
 
 ```{r}
-weights_summary_path = fs::path("tables/weights-summary.csv")
+weights_summary_path <- fs::path("tables/weights-summary.csv")
 readr::write_csv(weights_summary, weights_summary_path)
 ```
 
-# Graph plots
+# Graph visualization
+
+## Single graphs
 
 ```{r}
-graphs = bind_graphs(centralities$centralities)
+graphs <- purrr::reduce(centralities$centralities, bind_graphs)
 ```
 
 ```{r}
 set.seed(1)
-base_palette = sample(
+base_palette <- sample(
   c(
     "#F94144", "#F3722C", "#F8961E", "#F9844A", "#F9C74F", "#90BE6D", "#43AA8B",
     "#4D908E", "#577590", "#277DA1", "#F7A072", "#EDDEA4", "#8EA604", "#00CFC1",
     "#485696", "#37323E", "#985277", "#5C374C", "#7678ED", "#CE4257", "#FFBD00"
   )
 )
-graph_palette = colorRampPalette(base_palette)
+graph_palette <- colorRampPalette(base_palette)
 ```
 
 ```{r}
-layout_kk = create_layout(graphs, layout = "kk")
+layout_kk <- create_layout(graphs, layout = "kk")
 ```
 
 ```{r}
-nodes_layout_kk = igraph::layout_with_kk(
+source("R/plot_single_graph.R")
+```
+
+### Strength
+
+```{r}
+plot_dist_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = distance, 
+  centrality = dist_stre,
+  weight_label = "Euclidean distance",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/dist_stre.png", 
+  plot = plot_dist_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_pop_gravity_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_pop_gravity, 
+  centrality = dist_pop_gravity_stre,
+  weight_label = "Gravity model with population and distance",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/dist_pop_gravity_stre.png", 
+  plot = plot_dist_pop_gravity_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_forest_gravity_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_forest_gravity, 
+  centrality = dist_forest_gravity_stre,
+  weight_label = "Gravity model with forest loss and distance",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/dist_forest_gravity_stre.png", 
+  plot = plot_dist_forest_gravity_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time, 
+  centrality = time_stre,
+  weight_label = "Travel time",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/time_stre.png", 
+  plot = plot_time_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_pop_gravity_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_pop_gravity, 
+  centrality = time_pop_gravity_stre,
+  weight_label = "Gravity model with population and travel time",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/time_pop_gravity_stre.png", 
+  plot = plot_time_pop_gravity_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_forest_gravity_stre <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_forest_gravity, 
+  centrality = time_forest_gravity_stre,
+  weight_label = "Gravity model with forest loss and travel time",
+  centrality_label = "Strength centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/strength/time_forest_gravity_stre.png", 
+  plot = plot_time_forest_gravity_stre, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+### Closeness
+
+```{r}
+plot_dist_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = distance, 
+  centrality = dist_close,
+  weight_label = "Euclidean distance",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/dist_close.png", 
+  plot = plot_dist_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_pop_gravity_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_pop_gravity, 
+  centrality = dist_pop_gravity_close,
+  weight_label = "Gravity model with population and distance",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/dist_pop_gravity_close.png", 
+  plot = plot_dist_pop_gravity_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_forest_gravity_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_forest_gravity, 
+  centrality = dist_forest_gravity_close,
+  weight_label = "Gravity model with forest loss and distance",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/dist_forest_gravity_close.png", 
+  plot = plot_dist_forest_gravity_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time, 
+  centrality = time_close,
+  weight_label = "Travel time",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/time_close.png", 
+  plot = plot_time_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_pop_gravity_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_pop_gravity, 
+  centrality = time_pop_gravity_close,
+  weight_label = "Gravity model with population and travel time",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/time_pop_gravity_close.png", 
+  plot = plot_time_pop_gravity_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_forest_gravity_close <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_forest_gravity, 
+  centrality = time_forest_gravity_close,
+  weight_label = "Gravity model with forest loss and travel time",
+  centrality_label = "Closeness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/closeness/time_forest_gravity_close.png", 
+  plot = plot_time_forest_gravity_close, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+### Betweenness
+
+```{r}
+plot_dist_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = distance, 
+  centrality = dist_between,
+  weight_label = "Euclidean distance",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/dist_between.png", 
+  plot = plot_dist_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_pop_gravity_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_pop_gravity, 
+  centrality = dist_pop_gravity_between,
+  weight_label = "Gravity model with population and distance",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/dist_pop_gravity_between.png", 
+  plot = plot_dist_pop_gravity_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_forest_gravity_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_forest_gravity, 
+  centrality = dist_forest_gravity_between,
+  weight_label = "Gravity model with forest loss and distance",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/dist_forest_gravity_between.png", 
+  plot = plot_dist_forest_gravity_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time, 
+  centrality = time_between,
+  weight_label = "Travel time",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/time_between.png", 
+  plot = plot_time_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_pop_gravity_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_pop_gravity, 
+  centrality = time_pop_gravity_between,
+  weight_label = "Gravity model with population and travel time",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/time_pop_gravity_between.png", 
+  plot = plot_time_pop_gravity_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_forest_gravity_between <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_forest_gravity, 
+  centrality = time_forest_gravity_between,
+  weight_label = "Gravity model with forest loss and travel time",
+  centrality_label = "Betweenness centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/betweenness/time_forest_gravity_between.png", 
+  plot = plot_time_forest_gravity_between, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+### Eigenvector
+
+```{r}
+plot_dist_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = distance, 
+  centrality = dist_eigen,
+  weight_label = "Euclidean distance",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/dist_eigen.png", 
+  plot = plot_dist_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_pop_gravity_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_pop_gravity, 
+  centrality = dist_pop_gravity_eigen,
+  weight_label = "Gravity model with population and distance",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/dist_pop_gravity_eigen.png", 
+  plot = plot_dist_pop_gravity_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_dist_forest_gravity_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = dist_forest_gravity, 
+  centrality = dist_forest_gravity_eigen,
+  weight_label = "Gravity model with forest loss and distance",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/dist_forest_gravity_eigen.png", 
+  plot = plot_dist_forest_gravity_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time, 
+  centrality = time_eigen,
+  weight_label = "Travel time",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/time_eigen.png", 
+  plot = plot_time_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_pop_gravity_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_pop_gravity, 
+  centrality = time_pop_gravity_eigen,
+  weight_label = "Gravity model with population and travel time",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/time_pop_gravity_eigen.png", 
+  plot = plot_time_pop_gravity_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+```{r}
+plot_time_forest_gravity_eigen <- plot_single_graph(
+  graphs = graphs, layout = layout_kk,  
+  weight = time_forest_gravity, 
+  centrality = time_forest_gravity_eigen,
+  weight_label = "Gravity model with forest loss and travel time",
+  centrality_label = "Eigenvector centrality",
+  group = watershed
+)
+
+ggsave(
+  "figures/single-graph/eigenvector/time_forest_gravity_eigen.png", 
+  plot = plot_time_forest_gravity_eigen, 
+  height = 10, width = 9.5, units = "in"
+)
+```
+
+## Multiple graphs
+
+```{r}
+source("R/plot_multiple_graph.R")
+```
+
+```{r}
+layout_stress <- create_layout(graphs, layout = "stress")
+```
+
+### Strength
+
+```{r}
+facet_dist_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = dist_stre, 
+  weight_label = "Euclidean distance",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/facet_dist_stre.png", 
+  plot = facet_dist_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_pop_gravity_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_pop_gravity, centrality = dist_pop_gravity_stre, 
+  weight_label = "Gravity model weight with population and distance",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/dist_pop_gravity_stre.png", 
+  plot = facet_dist_pop_gravity_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_forest_gravity_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_forest_gravity, centrality = dist_forest_gravity_stre, 
+  weight_label = "Gravity model weight with forest loss and distance",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/dist_forest_gravity_stre.png", 
+  plot = facet_dist_forest_gravity_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = time_stre, 
+  weight_label = "Travel time",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/facet_time_stre.png", 
+  plot = facet_time_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_pop_gravity_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_pop_gravity, centrality = time_pop_gravity_stre, 
+  weight_label = "Gravity model weight with population and travel time",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/time_pop_gravity_stre.png", 
+  plot = facet_time_pop_gravity_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_forest_gravity_stre <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_forest_gravity, centrality = time_forest_gravity_stre, 
+  weight_label = "Gravity model weight with forest loss and travel time",
+  centrality_label = "Strength centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/strength/time_forest_gravity_stre.png", 
+  plot = facet_time_forest_gravity_stre, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+### Closeness
+
+```{r}
+facet_dist_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = dist_close, 
+  weight_label = "Euclidean distance",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/facet_dist_close.png", 
+  plot = facet_dist_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_pop_gravity_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_pop_gravity, centrality = dist_pop_gravity_close, 
+  weight_label = "Gravity model weight with population and distance",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/dist_pop_gravity_close.png", 
+  plot = facet_dist_pop_gravity_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_forest_gravity_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_forest_gravity, centrality = dist_forest_gravity_close, 
+  weight_label = "Gravity model weight with forest loss and distance",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/dist_forest_gravity_close.png", 
+  plot = facet_dist_forest_gravity_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = time_close, 
+  weight_label = "Travel time",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/facet_time_close.png", 
+  plot = facet_time_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_pop_gravity_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_pop_gravity, centrality = time_pop_gravity_close, 
+  weight_label = "Gravity model weight with population and travel time",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/time_pop_gravity_close.png", 
+  plot = facet_time_pop_gravity_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_forest_gravity_close <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_forest_gravity, centrality = time_forest_gravity_close, 
+  weight_label = "Gravity model weight with forest loss and travel time",
+  centrality_label = "Closeness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/closeness/time_forest_gravity_close.png", 
+  plot = facet_time_forest_gravity_close, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+### Betweenness
+
+```{r}
+facet_dist_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = dist_between, 
+  weight_label = "Euclidean distance",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/facet_dist_between.png", 
+  plot = facet_dist_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_pop_gravity_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_pop_gravity, centrality = dist_pop_gravity_between, 
+  weight_label = "Gravity model weight with population and distance",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/dist_pop_gravity_between.png", 
+  plot = facet_dist_pop_gravity_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_forest_gravity_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_forest_gravity, centrality = dist_forest_gravity_between, 
+  weight_label = "Gravity model weight with forest loss and distance",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/dist_forest_gravity_between.png", 
+  plot = facet_dist_forest_gravity_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = time_between, 
+  weight_label = "Travel time",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/facet_time_between.png", 
+  plot = facet_time_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_pop_gravity_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_pop_gravity, centrality = time_pop_gravity_between, 
+  weight_label = "Gravity model weight with population and travel time",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/time_pop_gravity_between.png", 
+  plot = facet_time_pop_gravity_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_forest_gravity_between <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_forest_gravity, centrality = time_forest_gravity_between, 
+  weight_label = "Gravity model weight with forest loss and travel time",
+  centrality_label = "Betweenness centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/betweenness/time_forest_gravity_between.png", 
+  plot = facet_time_forest_gravity_between, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+### Eigenvector
+
+```{r}
+facet_dist_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = dist_eigen, 
+  weight_label = "Euclidean distance",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/facet_dist_eigen.png", 
+  plot = facet_dist_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_pop_gravity_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_pop_gravity, centrality = dist_pop_gravity_eigen, 
+  weight_label = "Gravity model weight with population and distance",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/dist_pop_gravity_eigen.png", 
+  plot = facet_dist_pop_gravity_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_dist_forest_gravity_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = dist_forest_gravity, centrality = dist_forest_gravity_eigen, 
+  weight_label = "Gravity model weight with forest loss and distance",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/dist_forest_gravity_eigen.png", 
+  plot = facet_dist_forest_gravity_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = distance, centrality = time_eigen, 
+  weight_label = "Travel time",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/facet_time_eigen.png", 
+  plot = facet_time_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_pop_gravity_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_pop_gravity, centrality = time_pop_gravity_eigen, 
+  weight_label = "Gravity model weight with population and travel time",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/time_pop_gravity_eigen.png", 
+  plot = facet_time_pop_gravity_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+```{r}
+facet_time_forest_gravity_eigen <- plot_multiple_graph(
+  graphs = graphs, layout = layout_stress, facet = watershed,
+  weight = time_forest_gravity, centrality = time_forest_gravity_eigen, 
+  weight_label = "Gravity model weight with forest loss and travel time",
+  centrality_label = "Eigenvector centrality"
+)
+
+ggsave(
+  "figures/multiple-graph/eigenvector/time_forest_gravity_eigen.png", 
+  plot = facet_time_forest_gravity_eigen, 
+  height = 20, width = 14, units = "in"
+)
+```
+
+## 3D graphs
+
+```{r}
+nodes_layout_kk <- igraph::layout_with_kk(
   graphs, dim = 3
 )
 
@@ -243,7 +1012,7 @@ nodes_layout_kk = igraph::layout_with_kk(
 #   minz = rep(-30, nrow(nodes)), maxz = rep(30, nrow(nodes))
 # )
 
-nodes_layout_drl = igraph::layout_with_drl(
+nodes_layout_drl <- igraph::layout_with_drl(
   graphs, dim = 3
 )
 
@@ -251,23 +1020,23 @@ nodes_layout_drl = igraph::layout_with_drl(
 #   graphs
 # )
 
-colnames(nodes_layout_kk) = c("x", "y", "z")
-colnames(nodes_layout_drl) = c("x", "y", "z")
+colnames(nodes_layout_kk) <- c("x", "y", "z")
+colnames(nodes_layout_drl) <- c("x", "y", "z")
 
-nodes_layout_kk_attr = bind_cols(data.frame(nodes_layout_kk), village_centralities)
-nodes_layout_drl_attr = bind_cols(data.frame(nodes_layout_drl), village_centralities)
+nodes_layout_kk_attr <- bind_cols(data.frame(nodes_layout_kk), village_centralities)
+nodes_layout_drl_attr <- bind_cols(data.frame(nodes_layout_drl), village_centralities)
 ```
 
 ```{r}
-edges_layout_kk_x = rep(0, nrow(edges) * 3)
-edges_layout_kk_y = rep(0, nrow(edges) * 3)
-edges_layout_kk_z = rep(0, nrow(edges) * 3)
+edges_layout_kk_x <- rep(0, nrow(edges) * 3)
+edges_layout_kk_y <- rep(0, nrow(edges) * 3)
+edges_layout_kk_z <- rep(0, nrow(edges) * 3)
 
-edges_layout_id = rep(0, nrow(edges) * 3)
+edges_layout_id <- rep(0, nrow(edges) * 3)
 
-edges_layout_drl_x = rep(0, nrow(edges) * 3)
-edges_layout_drl_y = rep(0, nrow(edges) * 3)
-edges_layout_drl_z = rep(0, nrow(edges) * 3)
+edges_layout_drl_x <- rep(0, nrow(edges) * 3)
+edges_layout_drl_y <- rep(0, nrow(edges) * 3)
+edges_layout_drl_z <- rep(0, nrow(edges) * 3)
 
 for (row in 1:nrow(edges)) {
   from = edges$from[row]
@@ -298,35 +1067,35 @@ for (row in 1:nrow(edges)) {
   edges_layout_drl_z[((row*3)-2):(row*3)] = c(z_from, z_to, NA)
 }
 
-edges_layout_kk = tibble(
+edges_layout_kk <- tibble(
   x = edges_layout_kk_x, y = edges_layout_kk_y, z = edges_layout_kk_z,
   `village_id` = edges_layout_id
 )
 
-edges_layout_drl = tibble(
+edges_layout_drl <- tibble(
   x = edges_layout_drl_x, y = edges_layout_drl_y, z = edges_layout_drl_z,
   `village_id` = edges_layout_id
 )
 
-edges_layout_kk_attr = edges_layout_kk %>% 
+edges_layout_kk_attr <- edges_layout_kk |> 
   left_join(nodes, by = "village_id")
-edges_layout_drl_attr = edges_layout_drl %>% 
+edges_layout_drl_attr <- edges_layout_drl |> 
   left_join(nodes, by = "village_id")
 ```
 
 ```{r}
 library(plotly)
 
-fig = plot_ly()
+fig <- plot_ly()
 
-fig_edges_kk = fig %>%
+fig_edges_kk <- fig |>
   add_trace(
     data = edges_layout_kk_attr, x = ~x, y = ~y, z = ~z, type = "scatter3d", 
     mode = "lines", color = ~watershed, showlegend = FALSE,
     line = list(width = 0.5, opacity = 0.5), opacity = 0.5, hoverinfo = "none"
   )
 
-fig_network_kk = fig_edges_kk %>%
+fig_network_kk <- fig_edges_kk |>
   add_trace(
   data = nodes_layout_kk_attr, type = "scatter3d", mode = "markers", x = ~x, 
   y = ~y, z = ~z, size = ~population, color = ~watershed,
@@ -338,12 +1107,12 @@ fig_network_kk = fig_edges_kk %>%
   )
   )
 
-axis = list(
+axis <- list(
   showbackground = FALSE, showline = FALSE, zeroline = FALSE, showgrid = FALSE,
   showticklabels = FALSE, title = ""
 )
 
-fig_3d_network_kk = fig_network_kk %>% 
+fig_3d_network_kk <- fig_network_kk |> 
   layout(
     title = "", scene = list(xaxis = axis, yaxis = axis, zaxis = axis),
     margin = list(b = 40, l = 40, r = 40, t = 40)
@@ -355,14 +1124,14 @@ htmlwidgets::saveWidget(
 ```
 
 ```{r}
-fig_edges_drl = fig %>%
+fig_edges_drl <- fig |>
   add_trace(
     data = edges_layout_drl_attr, x = ~x, y = ~y, z = ~z, type = "scatter3d", 
     mode = "lines", color = ~watershed, showlegend = FALSE,
     line = list(width = 0.5, opacity = 0.5), opacity = 0.5, hoverinfo = "none"
   )
 
-fig_network_drl = fig_edges_drl %>%
+fig_network_drl <- fig_edges_drl |>
   add_trace(
   data = nodes_layout_drl_attr, type = "scatter3d", mode = "markers", x = ~x, 
   y = ~y, z = ~z, size = ~population, color = ~watershed,
@@ -374,7 +1143,7 @@ fig_network_drl = fig_edges_drl %>%
   )
   )
 
-fig_3d_network_drl = fig_network_drl %>% 
+fig_3d_network_drl <- fig_network_drl |> 
   layout(
     title = "", scene = list(xaxis = axis, yaxis = axis, zaxis = axis),
     margin = list(b = 40, l = 40, r = 40, t = 40)
@@ -385,855 +1154,4 @@ htmlwidgets::saveWidget(
 )
 ```
 
-
-```{r}
-plot_full_graph = function(graphs, layout, group, weight, centrality, weight_label, centrality_label) {
-  plt = graphs |> 
-    ggraph(layout = "kk") +
-    geom_edge_arc(
-      aes(alpha = {{ weight }}, color = as.factor({{ group }})), strength = 0.1
-    ) + 
-    geom_node_point(aes(size = {{ centrality }}, color = as.factor({{ group }}))) +
-    scale_color_manual(
-      limits = as.factor(pull(layout, {{ group }})), 
-      values = graph_palette(nrow(layout)),
-      guide = "none"
-    ) +
-    scale_edge_color_manual(
-      limits = as.factor(pull(layout, {{ group }})), 
-      values = graph_palette(nrow(layout)),
-      guide = "none"
-    ) +
-    scale_size_continuous(name = centrality_label, guide = "legend") +
-    scale_edge_alpha_continuous(name = weight_label) +
-    theme_graph(base_family = "sans") +
-    theme(
-      legend.position = "top", legend.box = "vertical", 
-      text = element_text(size = 15)
-    )
-  
-  plt
-}
-```
-
-## Strength
-
-```{r}
-plot_dist_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = distance, 
-  centrality = dist_stre,
-  weight_label = "Euclidean distance",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/dist_stre.png", 
-  plot = plot_dist_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_pop_gravity_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_pop_gravity, 
-  centrality = dist_pop_gravity_stre,
-  weight_label = "Gravity model with population and distance",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/dist_pop_gravity_stre.png", 
-  plot = plot_dist_pop_gravity_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_forest_gravity_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_forest_gravity, 
-  centrality = dist_forest_gravity_stre,
-  weight_label = "Gravity model with forest loss and distance",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/dist_forest_gravity_stre.png", 
-  plot = plot_dist_forest_gravity_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time, 
-  centrality = time_stre,
-  weight_label = "Travel time",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/time_stre.png", 
-  plot = plot_time_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_pop_gravity_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_pop_gravity, 
-  centrality = time_pop_gravity_stre,
-  weight_label = "Gravity model with population and travel time",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/time_pop_gravity_stre.png", 
-  plot = plot_time_pop_gravity_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_forest_gravity_stre = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_forest_gravity, 
-  centrality = time_forest_gravity_stre,
-  weight_label = "Gravity model with forest loss and travel time",
-  centrality_label = "Strength centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/strength/time_forest_gravity_stre.png", 
-  plot = plot_time_forest_gravity_stre, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-### Closeness
-
-```{r}
-plot_dist_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = distance, 
-  centrality = dist_close,
-  weight_label = "Euclidean distance",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/dist_close.png", 
-  plot = plot_dist_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_pop_gravity_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_pop_gravity, 
-  centrality = dist_pop_gravity_close,
-  weight_label = "Gravity model with population and distance",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/dist_pop_gravity_close.png", 
-  plot = plot_dist_pop_gravity_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_forest_gravity_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_forest_gravity, 
-  centrality = dist_forest_gravity_close,
-  weight_label = "Gravity model with forest loss and distance",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/dist_forest_gravity_close.png", 
-  plot = plot_dist_forest_gravity_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time, 
-  centrality = time_close,
-  weight_label = "Travel time",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/time_close.png", 
-  plot = plot_time_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_pop_gravity_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_pop_gravity, 
-  centrality = time_pop_gravity_close,
-  weight_label = "Gravity model with population and travel time",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/time_pop_gravity_close.png", 
-  plot = plot_time_pop_gravity_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_forest_gravity_close = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_forest_gravity, 
-  centrality = time_forest_gravity_close,
-  weight_label = "Gravity model with forest loss and travel time",
-  centrality_label = "Closeness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/closeness/time_forest_gravity_close.png", 
-  plot = plot_time_forest_gravity_close, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-### Betweenness
-
-```{r}
-plot_dist_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = distance, 
-  centrality = dist_between,
-  weight_label = "Euclidean distance",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/dist_between.png", 
-  plot = plot_dist_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_pop_gravity_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_pop_gravity, 
-  centrality = dist_pop_gravity_between,
-  weight_label = "Gravity model with population and distance",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/dist_pop_gravity_between.png", 
-  plot = plot_dist_pop_gravity_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_forest_gravity_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_forest_gravity, 
-  centrality = dist_forest_gravity_between,
-  weight_label = "Gravity model with forest loss and distance",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/dist_forest_gravity_between.png", 
-  plot = plot_dist_forest_gravity_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time, 
-  centrality = time_between,
-  weight_label = "Travel time",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/time_between.png", 
-  plot = plot_time_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_pop_gravity_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_pop_gravity, 
-  centrality = time_pop_gravity_between,
-  weight_label = "Gravity model with population and travel time",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/time_pop_gravity_between.png", 
-  plot = plot_time_pop_gravity_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_forest_gravity_between = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_forest_gravity, 
-  centrality = time_forest_gravity_between,
-  weight_label = "Gravity model with forest loss and travel time",
-  centrality_label = "Betweenness centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/betweenness/time_forest_gravity_between.png", 
-  plot = plot_time_forest_gravity_between, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-### Eigenvector
-
-```{r}
-plot_dist_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = distance, 
-  centrality = dist_eigen,
-  weight_label = "Euclidean distance",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/dist_eigen.png", 
-  plot = plot_dist_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_pop_gravity_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_pop_gravity, 
-  centrality = dist_pop_gravity_eigen,
-  weight_label = "Gravity model with population and distance",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/dist_pop_gravity_eigen.png", 
-  plot = plot_dist_pop_gravity_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_dist_forest_gravity_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = dist_forest_gravity, 
-  centrality = dist_forest_gravity_eigen,
-  weight_label = "Gravity model with forest loss and distance",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/dist_forest_gravity_eigen.png", 
-  plot = plot_dist_forest_gravity_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time, 
-  centrality = time_eigen,
-  weight_label = "Travel time",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/time_eigen.png", 
-  plot = plot_time_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_pop_gravity_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_pop_gravity, 
-  centrality = time_pop_gravity_eigen,
-  weight_label = "Gravity model with population and travel time",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/time_pop_gravity_eigen.png", 
-  plot = plot_time_pop_gravity_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-```{r}
-plot_time_forest_gravity_eigen = plot_full_graph(
-  graphs = graphs, layout = layout_kk,  
-  weight = time_forest_gravity, 
-  centrality = time_forest_gravity_eigen,
-  weight_label = "Gravity model with forest loss and travel time",
-  centrality_label = "Eigenvector centrality",
-  group = watershed
-)
-
-ggsave(
-  "figures/full-graph/eigenvector/time_forest_gravity_eigen.png", 
-  plot = plot_time_forest_gravity_eigen, 
-  height = 10, width = 9.5, units = "in"
-)
-```
-
-# Facets
-
-```{r}
-plot_facet_graph = function(graphs, layout, facet, weight, centrality, weight_label, centrality_label) {
-  plt = graphs |> 
-  ggraph(layout = "stress") +
-  facet_nodes(vars({{ facet }}), ncol = 4, scales = "free") +
-  geom_edge_arc(
-    aes(alpha = {{ weight }}, color = as.factor({{ facet }})), strength = 0.1
-  ) + 
-  geom_node_point(aes(size = {{ centrality }}, colour = as.factor({{ facet }}))) +
-  scale_color_manual(
-    limits = as.factor(pull(layout, {{ facet }})), 
-    values = graph_palette(nrow(layout)),
-    guide = "none"
-  ) +
-  scale_edge_color_manual(
-    limits = as.factor(pull(layout, {{ facet }})), 
-    values = graph_palette(nrow(layout)),
-    guide = "none"
-  ) +
-  scale_size_continuous(name = centrality_label, guide = "legend") +
-  scale_edge_alpha_continuous(name = weight_label) +
-  theme_graph(base_family = "sans", strip_text_size = 14, strip_text_face = "plain") +
-  theme(
-    legend.position = "top", legend.box = "vertical", 
-    text = element_text(size = 15)
-  )
-  
-  plt
-}
-```
-
-```{r}
-layout_stress = create_layout(graphs, layout = "stress")
-```
-
-### Strength
-
-```{r}
-facet_dist_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = dist_stre, 
-  weight_label = "Euclidean distance",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/facet_dist_stre.png", 
-  plot = facet_dist_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_pop_gravity_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_pop_gravity, centrality = dist_pop_gravity_stre, 
-  weight_label = "Gravity model weight with population and distance",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/dist_pop_gravity_stre.png", 
-  plot = facet_dist_pop_gravity_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_forest_gravity_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_forest_gravity, centrality = dist_forest_gravity_stre, 
-  weight_label = "Gravity model weight with forest loss and distance",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/dist_forest_gravity_stre.png", 
-  plot = facet_dist_forest_gravity_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = time_stre, 
-  weight_label = "Travel time",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/facet_time_stre.png", 
-  plot = facet_time_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_pop_gravity_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_pop_gravity, centrality = time_pop_gravity_stre, 
-  weight_label = "Gravity model weight with population and travel time",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/time_pop_gravity_stre.png", 
-  plot = facet_time_pop_gravity_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_forest_gravity_stre = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_forest_gravity, centrality = time_forest_gravity_stre, 
-  weight_label = "Gravity model weight with forest loss and travel time",
-  centrality_label = "Strength centrality"
-)
-
-ggsave(
-  "figures/facet-graph/strength/time_forest_gravity_stre.png", 
-  plot = facet_time_forest_gravity_stre, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-### Closeness
-
-```{r}
-facet_dist_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = dist_close, 
-  weight_label = "Euclidean distance",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/facet_dist_close.png", 
-  plot = facet_dist_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_pop_gravity_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_pop_gravity, centrality = dist_pop_gravity_close, 
-  weight_label = "Gravity model weight with population and distance",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/dist_pop_gravity_close.png", 
-  plot = facet_dist_pop_gravity_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_forest_gravity_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_forest_gravity, centrality = dist_forest_gravity_close, 
-  weight_label = "Gravity model weight with forest loss and distance",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/dist_forest_gravity_close.png", 
-  plot = facet_dist_forest_gravity_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = time_close, 
-  weight_label = "Travel time",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/facet_time_close.png", 
-  plot = facet_time_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_pop_gravity_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_pop_gravity, centrality = time_pop_gravity_close, 
-  weight_label = "Gravity model weight with population and travel time",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/time_pop_gravity_close.png", 
-  plot = facet_time_pop_gravity_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_forest_gravity_close = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_forest_gravity, centrality = time_forest_gravity_close, 
-  weight_label = "Gravity model weight with forest loss and travel time",
-  centrality_label = "Closeness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/closeness/time_forest_gravity_close.png", 
-  plot = facet_time_forest_gravity_close, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-### Betweenness
-
-```{r}
-facet_dist_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = dist_between, 
-  weight_label = "Euclidean distance",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/facet_dist_between.png", 
-  plot = facet_dist_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_pop_gravity_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_pop_gravity, centrality = dist_pop_gravity_between, 
-  weight_label = "Gravity model weight with population and distance",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/dist_pop_gravity_between.png", 
-  plot = facet_dist_pop_gravity_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_forest_gravity_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_forest_gravity, centrality = dist_forest_gravity_between, 
-  weight_label = "Gravity model weight with forest loss and distance",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/dist_forest_gravity_between.png", 
-  plot = facet_dist_forest_gravity_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = time_between, 
-  weight_label = "Travel time",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/facet_time_between.png", 
-  plot = facet_time_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_pop_gravity_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_pop_gravity, centrality = time_pop_gravity_between, 
-  weight_label = "Gravity model weight with population and travel time",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/time_pop_gravity_between.png", 
-  plot = facet_time_pop_gravity_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_forest_gravity_between = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_forest_gravity, centrality = time_forest_gravity_between, 
-  weight_label = "Gravity model weight with forest loss and travel time",
-  centrality_label = "Betweenness centrality"
-)
-
-ggsave(
-  "figures/facet-graph/betweenness/time_forest_gravity_between.png", 
-  plot = facet_time_forest_gravity_between, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-### Eigenvector
-
-```{r}
-facet_dist_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = dist_eigen, 
-  weight_label = "Euclidean distance",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/facet_dist_eigen.png", 
-  plot = facet_dist_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_pop_gravity_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_pop_gravity, centrality = dist_pop_gravity_eigen, 
-  weight_label = "Gravity model weight with population and distance",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/dist_pop_gravity_eigen.png", 
-  plot = facet_dist_pop_gravity_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_dist_forest_gravity_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = dist_forest_gravity, centrality = dist_forest_gravity_eigen, 
-  weight_label = "Gravity model weight with forest loss and distance",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/dist_forest_gravity_eigen.png", 
-  plot = facet_dist_forest_gravity_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = distance, centrality = time_eigen, 
-  weight_label = "Travel time",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/facet_time_eigen.png", 
-  plot = facet_time_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_pop_gravity_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_pop_gravity, centrality = time_pop_gravity_eigen, 
-  weight_label = "Gravity model weight with population and travel time",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/time_pop_gravity_eigen.png", 
-  plot = facet_time_pop_gravity_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
-
-```{r}
-facet_time_forest_gravity_eigen = plot_facet_graph(
-  graphs = graphs, layout = layout_stress, facet = watershed,
-  weight = time_forest_gravity, centrality = time_forest_gravity_eigen, 
-  weight_label = "Gravity model weight with forest loss and travel time",
-  centrality_label = "Eigenvector centrality"
-)
-
-ggsave(
-  "figures/facet-graph/eigenvector/time_forest_gravity_eigen.png", 
-  plot = facet_time_forest_gravity_eigen, 
-  height = 20, width = 14, units = "in"
-)
-```
 
