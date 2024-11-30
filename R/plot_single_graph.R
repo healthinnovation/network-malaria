@@ -13,20 +13,44 @@ plot_single_graph <- function(graphs, layout, group, weight, centrality, weight_
     ggplot2::scale_color_manual(
       limits = as.factor(dplyr::pull(layout, {{ group }})),
       values = g_palette(nrow(layout)),
-      guide = "none"
+      name = "Watershed",
+      guide = ggplot2::guide_legend(
+        position = "right", direction = "vertical",
+        theme = theme(ggplot2::element_text(size = 12)),
+      )
     ) +
     ggraph::scale_edge_color_manual(
       limits = as.factor(dplyr::pull(layout, {{ group }})),
       values = g_palette(nrow(layout)),
-      guide = "none"
+      name = "Watershed",
+      guide = ggplot2::guide_legend(
+        position = "right", direction = "vertical",
+        theme = theme(ggplot2::element_text(size = 12))
+      )
     ) +
-    ggplot2::scale_size_continuous(name = centrality_label, guide = "legend") +
-    ggraph::scale_edge_alpha_continuous(name = weight_label) +
+    ggplot2::scale_size_continuous(
+      name = centrality_label,
+      guide = ggplot2::guide_legend(
+        position = "top", direction = "horizontal",
+        theme = ggplot2::theme(
+          ggplot2::element_text(size = 15)
+        )
+      )
+    ) +
+    ggraph::scale_edge_alpha_continuous(
+      name = weight_label,
+      guide = ggplot2::guide_legend(
+        position = "top", direction = "horizontal",
+        theme = ggplot2::theme(
+          ggplot2::element_text(size = 15)
+        )
+      )
+    ) +
     ggraph::theme_graph(base_family = "sans") +
     ggplot2::theme(
-      legend.position = "top", legend.box = "vertical",
-      text = ggplot2::element_text(size = 15)
+      legend.box = "vertical"
     )
 
   plt
 }
+
